@@ -24,27 +24,27 @@ export function PricingGrid({
   isDark,
   onFreePlanClick,
 }: PricingGridProps) {
-  const accentTextClass = isDark ? "text-[#c9a84c]" : "text-amber-800";
-  const accentBorderClass = isDark ? "border-[#c9a84c]" : "border-amber-800";
+  const accentTextClass = isDark ? "text-[#d2ab55]" : "text-amber-800";
+  const accentBorderClass = isDark ? "border-[#d2ab55]" : "border-amber-800";
   const accentButtonClass = cx(
     "transition-colors",
     isDark
-      ? "border border-[#c9a84c] bg-[#c9a84c] text-black hover:border-[#d8b865] hover:bg-[#d8b865]"
+      ? "border border-[#d2ab55] bg-[#d2ab55] text-[#1a140b] hover:border-[#e1bf68] hover:bg-[#e1bf68]"
       : "border border-amber-800 bg-amber-800 text-white hover:border-amber-900 hover:bg-amber-900",
   );
-  const mutedClass = isDark ? "text-[#8d8476]" : "text-[#6f6658]";
+  const mutedClass = isDark ? "text-[#b3a693]" : "text-[#6f6658]";
   const panelClass = cx(
     "border p-8 transition-colors duration-300",
-    isDark ? "border-[#27211a] bg-[#0a0a0a]" : "border-[#ddd3c1] bg-[#fffdf8]",
+    isDark ? "border-[#3a3025] bg-[#13100d]" : "border-[#ddd3c1] bg-[#fffdf8]",
   );
-  const sectionDividerClass = isDark ? "bg-[#1d1a16]" : "bg-[#ddd3c1]";
+  const sectionDividerClass = isDark ? "bg-[#2b241b]" : "bg-[#ddd3c1]";
 
   return (
     <div className={cx("mt-14 grid gap-px md:grid-cols-3", sectionDividerClass)}>
       {pricingPlans.map((plan) => (
         <div
           key={plan.id}
-          className={cx(panelClass, plan.featured && "ring-1 ring-[#c9a84c]/40")}
+          className={cx(panelClass, plan.featured && "ring-1 ring-[#d2ab55]/40")}
         >
           <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
             {plan.name}

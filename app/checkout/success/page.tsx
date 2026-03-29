@@ -13,15 +13,15 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 export default function CheckoutSuccessPage() {
   return (
-    <main className="min-h-screen bg-[#050505] px-6 py-16 text-[#efe7da]">
-      <div className="mx-auto max-w-3xl border border-[#27211a] bg-[#0a0a0a] p-8 md:p-12">
+    <main className="min-h-screen bg-[#090806] px-6 py-16 text-[#f5efe4]">
+      <div className="mx-auto max-w-3xl border border-[#3a3025] bg-[#13100d] p-8 md:p-12">
         <div className="text-[11px] uppercase tracking-[0.22em] text-emerald-400">
           Checkout complete
         </div>
         <h1 className={cx(playfair.className, "mt-4 text-4xl md:text-5xl")}>
           Stripe says you are in.
         </h1>
-        <p className="mt-4 text-lg leading-8 text-[#8d8476]">
+        <p className="mt-4 text-lg leading-8 text-[#b3a693]">
           The subscription purchase completed successfully. The next backend step
           is wiring Stripe webhooks to unlock paid features automatically inside
           MIROR.
@@ -30,13 +30,13 @@ export default function CheckoutSuccessPage() {
         <div className="mt-8 flex flex-wrap gap-4">
           <Link
             href="/"
-            className="rounded-sm border border-[#c9a84c] bg-[#c9a84c] px-6 py-3 font-semibold text-black transition-colors hover:border-[#d8b865] hover:bg-[#d8b865]"
+            className="rounded-sm border border-[#d2ab55] bg-[#d2ab55] px-6 py-3 font-semibold text-[#1a140b] transition-colors hover:border-[#e1bf68] hover:bg-[#e1bf68]"
           >
             Back to home
           </Link>
           <Link
             href="/pricing"
-            className="rounded-sm border border-[#c9a84c] px-6 py-3 font-semibold text-[#c9a84c] transition-colors hover:bg-[#17130f]"
+            className="rounded-sm border border-[#d2ab55] px-6 py-3 font-semibold text-[#d2ab55] transition-colors hover:bg-[#211a13]"
           >
             View plans
           </Link>

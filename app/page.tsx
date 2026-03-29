@@ -197,7 +197,7 @@ function BackgroundDecor({ isDark }: { isDark: boolean }) {
         className="absolute inset-0"
         style={{
           background: isDark
-            ? "radial-gradient(circle at 18% 12%, rgba(201,168,76,0.1), transparent 28%), radial-gradient(circle at 82% 22%, rgba(201,168,76,0.08), transparent 24%), linear-gradient(180deg, rgba(5,5,5,0.96), rgba(5,5,5,1))"
+            ? "radial-gradient(circle at 18% 12%, rgba(210,171,85,0.16), transparent 30%), radial-gradient(circle at 82% 22%, rgba(210,171,85,0.11), transparent 24%), radial-gradient(circle at 50% 0%, rgba(210,171,85,0.08), transparent 38%), linear-gradient(180deg, rgba(12,10,8,0.98), rgba(7,6,5,1))"
             : "radial-gradient(circle at 18% 12%, rgba(124,78,12,0.08), transparent 28%), radial-gradient(circle at 82% 22%, rgba(124,78,12,0.05), transparent 24%), linear-gradient(180deg, rgba(252,250,245,0.98), rgba(252,250,245,1))",
         }}
       />
@@ -205,7 +205,7 @@ function BackgroundDecor({ isDark }: { isDark: boolean }) {
         className="absolute inset-0 opacity-30"
         style={{
           backgroundImage: isDark
-            ? "linear-gradient(rgba(201,168,76,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(201,168,76,0.05) 1px, transparent 1px)"
+            ? "linear-gradient(rgba(210,171,85,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(210,171,85,0.08) 1px, transparent 1px)"
             : "linear-gradient(rgba(124,78,12,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(124,78,12,0.05) 1px, transparent 1px)",
           backgroundSize: "64px 64px",
           maskImage:
@@ -228,11 +228,11 @@ function Score({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className={isDark ? "text-[#9f9687]" : "text-[#6f6658]"}>{label}</span>
-        <span className={isDark ? "text-[#c9a84c]" : "text-amber-800"}>{value}</span>
+        <span className={isDark ? "text-[#c7b9a6]" : "text-[#6f6658]"}>{label}</span>
+        <span className={isDark ? "text-[#d2ab55]" : "text-amber-800"}>{value}</span>
       </div>
-      <div className={cx("h-1.5 rounded-full", isDark ? "bg-white/10" : "bg-[#dfd5c3]")}> 
-        <div className="h-1.5 rounded-full bg-[#c9a84c]" style={{ width: `${value}%` }} />
+      <div className={cx("h-1.5 rounded-full", isDark ? "bg-[#2f271e]" : "bg-[#dfd5c3]")}>
+        <div className="h-1.5 rounded-full bg-[#d2ab55]" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -261,31 +261,31 @@ export default function Page() {
 
   const wrapClass = cx(
     "relative min-h-screen overflow-x-hidden transition-colors duration-300",
-    isDark ? "bg-[#050505] text-[#efe7da]" : "bg-[#fcfaf5] text-[#17130e]",
+    isDark ? "bg-[#090806] text-[#f5efe4]" : "bg-[#fcfaf5] text-[#17130e]",
   );
   const panelClass = cx(
     "border transition-colors duration-300",
-    isDark ? "border-[#27211a] bg-[#0a0a0a]" : "border-[#ddd3c1] bg-[#fffdf8]",
+    isDark ? "border-[#3a3025] bg-[#13100d]" : "border-[#ddd3c1] bg-[#fffdf8]",
   );
   const softPanelClass = cx(
     "rounded-2xl border transition-colors duration-300",
-    isDark ? "border-[#2b261f] bg-[#0f0f0f]" : "border-[#e3d9c7] bg-[#f7f1e8]",
+    isDark ? "border-[#43372a] bg-[#181411]" : "border-[#e3d9c7] bg-[#f7f1e8]",
   );
-  const accentTextClass = isDark ? "text-[#c9a84c]" : "text-amber-800";
-  const accentBorderClass = isDark ? "border-[#c9a84c]" : "border-amber-800";
+  const accentTextClass = isDark ? "text-[#d2ab55]" : "text-amber-800";
+  const accentBorderClass = isDark ? "border-[#d2ab55]" : "border-amber-800";
   const accentButtonClass = cx(
     "transition-colors",
     isDark
-      ? "border border-[#c9a84c] bg-[#c9a84c] text-black hover:border-[#d8b865] hover:bg-[#d8b865]"
+      ? "border border-[#d2ab55] bg-[#d2ab55] text-[#1a140b] hover:border-[#e1bf68] hover:bg-[#e1bf68]"
       : "border border-amber-800 bg-amber-800 text-white hover:border-amber-900 hover:bg-amber-900",
   );
-  const mutedClass = isDark ? "text-[#8d8476]" : "text-[#6f6658]";
-  const subduedClass = isDark ? "text-[#6a6358]" : "text-[#8f8372]";
+  const mutedClass = isDark ? "text-[#b3a693]" : "text-[#6f6658]";
+  const subduedClass = isDark ? "text-[#8e816f]" : "text-[#8f8372]";
   const secondaryButtonClass = isDark
-    ? "border-[#2b261f] text-[#8d8476] hover:border-[#4a3922] hover:text-[#efe7da]"
+    ? "border-[#43372a] text-[#b3a693] hover:border-[#6a5842] hover:bg-[#1a1510] hover:text-[#f5efe4]"
     : "border-[#d7ccb7] text-[#6f6658] hover:border-amber-700/40 hover:text-amber-900";
-  const sectionDividerClass = isDark ? "bg-[#1d1a16]" : "bg-[#ddd3c1]";
-  const sectionSurfaceClass = isDark ? "bg-[#090909]" : "bg-[#f7f1e8]";
+  const sectionDividerClass = isDark ? "bg-[#2b241b]" : "bg-[#ddd3c1]";
+  const sectionSurfaceClass = isDark ? "bg-[#0f0c09]" : "bg-[#f7f1e8]";
   const logoClass = cx(playfair.className, "select-none text-[2rem] font-medium uppercase tracking-[0.32em]");
   const headingClass = playfair.className;
   const sectionEyebrowClass = cx("text-[11px] uppercase tracking-[0.24em]", accentTextClass);
@@ -415,13 +415,14 @@ export default function Page() {
       <header
         className={cx(
           "sticky top-0 z-40 border-b backdrop-blur-xl transition-colors duration-300",
-          isDark ? "border-[#1d1a16] bg-[#050505]/90" : "border-[#ddd3c1] bg-[#fcfaf5]/90",
+          isDark ? "border-[#2b241b] bg-[#090806]/92" : "border-[#ddd3c1] bg-[#fcfaf5]/90",
         )}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
           <div className={logoClass}>
-            <span className={isDark ? "text-[#f0ece4]" : "text-[#17130e]"}>MIR</span>
-            <span className={accentTextClass}>OR</span>
+            <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+            <span className={accentTextClass}>O</span>
+            <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
           </div>
 
           <nav className="hidden items-center gap-10 md:flex">
@@ -507,18 +508,19 @@ export default function Page() {
                 <div
                   className={cx(
                     "rounded-[1.5rem] p-5",
-                    isDark ? "bg-[#0a0a0a]" : "bg-[#fffdf8]",
+                    isDark ? "bg-[#13100d]" : "bg-[#fffdf8]",
                   )}
                 >
                   <div
                     className={cx(
                       "flex items-center justify-between border-b pb-4",
-                      isDark ? "border-white/10" : "border-[#e3d9c7]",
+                      isDark ? "border-[#3b3228]" : "border-[#e3d9c7]",
                     )}
                   >
                     <div className={cx(playfair.className, "text-sm uppercase tracking-[0.22em]")}>
-                      <span className={isDark ? "text-[#f0ece4]" : "text-[#17130e]"}>MIR</span>
-                      <span className={accentTextClass}>OR</span>
+                      <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+                      <span className={accentTextClass}>O</span>
+                      <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
                     </div>
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
                       Date mode
@@ -528,13 +530,13 @@ export default function Page() {
                   <div
                     className={cx(
                       "mt-4 rounded-2xl border border-dashed p-8 text-center",
-                      isDark ? "border-white/10 bg-white/5" : "border-[#d9ceb9] bg-[#f8f3ea]",
+                      isDark ? "border-[#3b3228] bg-[#1b1713]" : "border-[#d9ceb9] bg-[#f8f3ea]",
                     )}
                   >
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
                       Upload preview
                     </div>
-                    <div className={cx("mt-3 text-base font-semibold", isDark ? "text-[#f0ece4]" : "text-[#17130e]")}>
+                    <div className={cx("mt-3 text-base font-semibold", isDark ? "text-[#f5efe4]" : "text-[#17130e]")}>
                       Selfie or full look
                     </div>
                     <div className={cx("mt-2 text-sm", mutedClass)}>
@@ -551,7 +553,7 @@ export default function Page() {
                           index === 0
                             ? accentButtonClass
                             : isDark
-                              ? "bg-white/5 text-[#8d8476]"
+                              ? "bg-[#1b1713] text-[#b3a693]"
                               : "bg-[#eee5d8] text-[#6f6658]",
                         )}
                       >
@@ -563,7 +565,7 @@ export default function Page() {
                   <div
                     className={cx(
                       "mt-4 rounded-2xl p-4",
-                      isDark ? "bg-white/5" : "border border-[#e3d9c7] bg-[#f8f3ea]",
+                      isDark ? "bg-[#1b1713]" : "border border-[#e3d9c7] bg-[#f8f3ea]",
                     )}
                   >
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
@@ -579,7 +581,7 @@ export default function Page() {
                       className={cx(
                         "mt-4 inline-flex rounded-sm border px-3 py-2 text-[10px] uppercase tracking-[0.15em]",
                         isDark
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                          ? "border-emerald-400/35 bg-emerald-400/12 text-emerald-300"
                           : "border-emerald-300 bg-emerald-50 text-emerald-700",
                       )}
                     >
@@ -625,7 +627,7 @@ export default function Page() {
         <section
           className={cx(
             "border-y transition-colors duration-300",
-            isDark ? "border-[#1d1a16] bg-[#090909]" : "border-[#ddd3c1] bg-[#f7f1e8]",
+            isDark ? "border-[#2b241b] bg-[#0f0c09]" : "border-[#ddd3c1] bg-[#f7f1e8]",
           )}
         >
           <div className="mx-auto grid max-w-7xl md:grid-cols-4">
@@ -634,7 +636,7 @@ export default function Page() {
                 key={label}
                 className={cx(
                   "border-r px-8 py-8 last:border-r-0",
-                  isDark ? "border-[#1d1a16]" : "border-[#ddd3c1]",
+                  isDark ? "border-[#2b241b]" : "border-[#ddd3c1]",
                 )}
               >
                 <div className={cx(headingClass, "text-5xl leading-none")}>{value}</div>
@@ -663,7 +665,7 @@ export default function Page() {
                   key={step.title}
                   className={cx(
                     "p-8 transition-colors duration-300",
-                    isDark ? "bg-[#050505]" : "bg-[#fffdf8]",
+                    isDark ? "bg-[#090806]" : "bg-[#fffdf8]",
                   )}
                 >
                   <div className={cx("text-[10px] uppercase tracking-[0.18em]", subduedClass)}>
@@ -697,13 +699,13 @@ export default function Page() {
                   key={card.title}
                   className={cx(
                     "min-h-[260px] p-10 transition-colors duration-300",
-                    isDark ? "bg-[#090909]" : "bg-[#fffdf8]",
+                    isDark ? "bg-[#0f0c09]" : "bg-[#fffdf8]",
                   )}
                 >
                   <div
                     className={cx(
                       "inline-flex h-12 w-12 items-center justify-center rounded-xl border text-sm",
-                      isDark ? "border-[#3a2f1c] bg-[#17130f]" : "border-amber-200 bg-amber-50",
+                      isDark ? "border-[#5a4935] bg-[#211a13]" : "border-amber-200 bg-amber-50",
                       accentTextClass,
                     )}
                   >
@@ -723,12 +725,13 @@ export default function Page() {
               <div
                 className={cx(
                   "flex items-center justify-between border-b px-5 py-4",
-                  isDark ? "border-[#1d1a16] bg-[#0f0f0f]" : "border-[#ddd3c1] bg-[#f7f1e8]",
+                  isDark ? "border-[#2b241b] bg-[#181411]" : "border-[#ddd3c1] bg-[#f7f1e8]",
                 )}
               >
                 <div className={cx(playfair.className, "text-sm uppercase tracking-[0.22em]")}>
-                  <span className={isDark ? "text-[#f0ece4]" : "text-[#17130e]"}>MIR</span>
-                  <span className={accentTextClass}>OR</span>
+                  <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+                  <span className={accentTextClass}>O</span>
+                  <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
                 </div>
                 <div className={mutedClass}>Demo</div>
               </div>
@@ -914,7 +917,7 @@ export default function Page() {
               <h2 className={cx(headingClass, "mt-3 text-4xl")}>Image shown next to the verdict.</h2>
 
               <div className="mt-8 grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
-                <div className={cx("rounded-2xl p-4", isDark ? "bg-[#0f0f0f]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                   {previewImage ? (
                     <img
                       src={previewImage}
@@ -977,7 +980,7 @@ export default function Page() {
                       </div>
 
                       <div className="mt-8 grid gap-4 md:grid-cols-2">
-                        <div className={cx("rounded-2xl p-4", isDark ? "bg-[#0f0f0f]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                        <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-500">
                             What works
                           </div>
@@ -991,7 +994,7 @@ export default function Page() {
                           </ul>
                         </div>
 
-                        <div className={cx("rounded-2xl p-4", isDark ? "bg-[#0f0f0f]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                        <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-red-500">
                             What hurts
                           </div>
@@ -1009,7 +1012,7 @@ export default function Page() {
                       <div
                         className={cx(
                           "mt-4 rounded-2xl p-4",
-                          isDark ? "bg-[#17130f]" : "border border-amber-200 bg-amber-50",
+                          isDark ? "bg-[#221a13]" : "border border-amber-200 bg-amber-50",
                         )}
                       >
                         <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
