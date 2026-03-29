@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>MIROR — AI Appearance Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════
+   THEME VARIABLES
+══════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:       #09090b;
+  --s1:       #0f0f12;
+  --s2:       #161619;
+  --s3:       #1e1e24;
+  --border:   #27272c;
+  --border2:  #3a3a44;
+  --gold:     #c9a84c;
+  --gold-l:   #e2c26a;
+  --gold-d:   rgba(201,168,76,.09);
+  --gold-btn: #c9a84c;
+  --white:    #f0ece4;
+  --text:     #9a9488;
+  --muted:    #52504a;
+  --card-bg:  #0f0f12;
+  --input-bg: #161619;
+  --success:  #4ade80;
+  --warn:     #fb923c;
+  --danger:   #f87171;
+  --shadow:   rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg:       #fafaf8;
+  --s1:       #f4f0e8;
+  --s2:       #ede9df;
+  --s3:       #e4dfd4;
+  --border:   #ddd8cc;
+  --border2:  #c8c0b0;
+  --gold:     #7c4e0c;
+  --gold-l:   #9a6418;
+  --gold-d:   rgba(124,78,12,.07);
+  --gold-btn: #7c4e0c;
+  --white:    #18160f;
+  --text:     #4a4438;
+  --muted:    #8a8070;
+  --card-bg:  #f4f0e8;
+  --input-bg: #ede9df;
+  --success:  #15803d;
+  --warn:     #c2410c;
+  --danger:   #dc2626;
+  --shadow:   rgba(0,0,0,.15);
+  color-scheme: light;
+}
+
+/* ══════════════════════════════════════════════
+   RESET + BASE
+══════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;font-weight:300;overflow-x:hidden;transition:background .3s,color .3s;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.018;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:256px;}
+img{max-width:100%;display:block;}
+button{cursor:pointer;}
+
+/* ══════════════════════════════════════════════
+   CURSOR
+══════════════════════════════════════════════ */
+#cur{position:fixed;width:8px;height:8px;border-radius:50%;background:var(--gold);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s;}
+#cur-r{position:fixed;width:34px;height:34px;border-radius:50%;border:1px solid rgba(201,168,76,.4);pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:transform .16s ease-out,border-color .3s;}
+[data-theme="light"] #cur{background:var(--gold);}
+[data-theme="light"] #cur-r{border-color:rgba(124,78,12,.4);}
+
+/* ══════════════════════════════════════════════
+   TYPOGRAPHY
+══════════════════════════════════════════════ */
+h1,h2,h3,.serif{font-family:'Playfair Display',serif;}
+.mono{font-family:'DM Mono',monospace;}
+h1{font-size:clamp(52px,7vw,96px);line-height:.92;color:var(--white);font-weight:700;}
+h1 em{font-style:italic;color:var(--gold);}
+h2{font-size:clamp(34px,4vw,58px);line-height:1.05;color:var(--white);font-weight:700;}
+h2 em{font-style:italic;color:var(--gold);}
+h3{font-size:clamp(20px,2vw,26px);color:var(--white);font-weight:600;line-height:1.15;}
+
+/* ══════════════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════════════ */
+.container{max-width:1280px;margin:0 auto;padding:0 48px;}
+.section{padding:96px 0;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:60px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;}
+
+/* ══════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════ */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:20px 48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,var(--bg) 60%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid transparent;transition:border-color .3s,background .3s;}
+nav.scrolled{border-bottom-color:var(--border);}
+.logo{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:.35em;color:var(--white);font-weight:700;text-transform:uppercase;}
+.logo em{font-style:normal;color:var(--gold);}
+.nav-center{display:flex;gap:36px;}
+.nav-center a{color:var(--muted);text-decoration:none;font-size:12px;letter-spacing:.14em;text-transform:uppercase;transition:color .2s;}
+.nav-center a:hover{color:var(--gold);}
+.nav-right{display:flex;align-items:center;gap:14px;}
+/* Theme Toggle */
+.theme-toggle{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:30px;padding:5px 10px;cursor:pointer;transition:all .2s;}
+.theme-toggle-icon{font-size:14px;}
+.theme-toggle-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.nav-btn{background:transparent;border:1px solid var(--border2);color:var(--text);padding:9px 20px;font-family:'Outfit',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.nav-btn:hover{border-color:var(--gold);color:var(--gold);}
+.nav-cta{background:var(--gold);border:1px solid var(--gold);color:#000;padding:9px 22px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.nav-cta:hover{background:var(--gold-l);border-color:var(--gold-l);}
+
+/* ══════════════════════════════════════════════
+   HERO
+══════════════════════════════════════════════ */
+.hero{min-height:100vh;display:flex;align-items:center;padding:120px 48px 80px;position:relative;overflow:hidden;}
+.hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 55% 60% at 70% 50%,rgba(201,168,76,.06) 0%,transparent 65%),radial-gradient(ellipse 40% 40% at 20% 80%,rgba(201,168,76,.03) 0%,transparent 55%);}
+.hero-grid-lines{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:64px 64px;opacity:.4;mask-image:radial-gradient(ellipse 80% 80% at center,black 30%,transparent 75%);}
+.hero-content{position:relative;z-index:1;max-width:640px;}
+.badge{display:inline-flex;align-items:center;gap:9px;background:var(--gold-d);border:1px solid rgba(201,168,76,.25);padding:7px 16px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);border-radius:2px;margin-bottom:32px;animation:fadeUp .7s ease both;}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.5);}}
+.hero h1{animation:fadeUp .7s .1s ease both;margin-bottom:24px;}
+.hero-sub{font-size:17px;line-height:1.75;color:var(--text);max-width:500px;margin-bottom:44px;animation:fadeUp .7s .2s ease both;}
+.hero-actions{display:flex;gap:14px;flex-wrap:wrap;animation:fadeUp .7s .3s ease both;}
+.btn-gold{background:var(--gold);color:#000;border:1px solid var(--gold);padding:15px 36px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;box-shadow:0 6px 28px rgba(201,168,76,.25);}
+.btn-gold:hover{background:var(--gold-l);border-color:var(--gold-l);transform:translateY(-1px);box-shadow:0 10px 36px rgba(201,168,76,.35);}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border2);padding:15px 28px;font-family:'Outfit',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+/* Hero float cards */
+.hero-cards{position:absolute;right:60px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:14px;}
+.hc{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px;width:248px;box-shadow:0 24px 60px var(--shadow);}
+.hc:nth-child(1){animation:float1 5s ease-in-out infinite;}
+.hc:nth-child(2){animation:float2 5s ease-in-out infinite;}
+@keyframes float1{0%,100%{transform:translateY(0) rotate(-1.5deg);}50%{transform:translateY(-10px) rotate(-1.5deg);}}
+@keyframes float2{0%,100%{transform:translateY(0) rotate(1deg);}50%{transform:translateY(-7px) rotate(1deg);}}
+.hc-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.hc-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--white);margin-bottom:12px;}
+.hc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.hc-name{font-size:10px;color:var(--muted);width:72px;flex-shrink:0;}
+.hc-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.hc-fill{height:100%;background:var(--gold);border-radius:2px;}
+.hc-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);}
+.hc-verdict{display:inline-block;background:rgba(250,200,50,.08);border:1px solid rgba(201,168,76,.2);color:var(--gold);font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;border-radius:2px;margin-top:6px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+/* ══════════════════════════════════════════════
+   STATS BAR
+══════════════════════════════════════════════ */
+.stats-bar{display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--s1);}
+.stat{flex:1;padding:28px 40px;border-right:1px solid var(--border);}
+.stat:last-child{border-right:none;}
+.stat-n{font-family:'Playfair Display',serif;font-size:38px;color:var(--white);line-height:1;margin-bottom:5px;}
+.stat-n span{color:var(--gold);}
+.stat-d{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+
+/* ══════════════════════════════════════════════
+   HOW IT WORKS
+══════════════════════════════════════════════ */
+.hiw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;background:var(--border);}
+.hiw-step{background:var(--bg);padding:32px 24px;border-top:2px solid transparent;transition:background .3s,border-color .3s;}
+.hiw-step:hover{background:var(--s1);border-top-color:var(--gold);}
+.hiw-n{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;margin-bottom:16px;}
+.hiw-icon{font-size:26px;margin-bottom:14px;}
+.hiw-step h3{font-family:'Playfair Display',serif;font-size:16px;color:var(--white);margin-bottom:8px;font-weight:600;}
+.hiw-step p{font-size:12px;line-height:1.65;color:var(--muted);}
+
+/* ══════════════════════════════════════════════
+   SECTION HEADER
+══════════════════════════════════════════════ */
+.sec-tag{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.sec-sub{font-size:15px;line-height:1.8;color:var(--muted);max-width:500px;margin-bottom:56px;}
+
+/* ══════════════════════════════════════════════
+   MAIN APP SECTION
+══════════════════════════════════════════════ */
+#app-section{background:var(--s1);border-top:1px solid var(--border);}
+.app-wrap{display:grid;grid-template-columns:400px 1fr;gap:0;background:var(--border);}
+/* Left: Step nav sidebar */
+.app-sidebar{background:var(--s1);padding:0;position:sticky;top:80px;align-self:start;}
+.app-sidebar-header{padding:28px 28px 20px;border-bottom:1px solid var(--border);}
+.app-sidebar-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--white);margin-bottom:4px;}
+.app-sidebar-sub{font-size:12px;color:var(--muted);}
+/* Mode switcher */
+.mode-tabs{display:flex;margin:20px 28px 0;border:1px solid var(--border);border-radius:3px;overflow:hidden;}
+.mode-tab{flex:1;padding:10px 8px;font-family:'Outfit',sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;transition:all .2s;border-right:1px solid var(--border);}
+.mode-tab:last-child{border-right:none;}
+.mode-tab.active{background:var(--gold);color:#000;font-weight:600;}
+/* Steps list */
+.steps-list{padding:20px 0;}
+.step-item{display:flex;align-items:center;gap:14px;padding:14px 28px;cursor:pointer;transition:background .2s;border-left:2px solid transparent;}
+.step-item:hover{background:var(--s2);}
+.step-item.active{border-left-color:var(--gold);background:var(--s2);}
+.step-item.done{border-left-color:var(--success);}
+.step-num{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0;transition:all .2s;}
+.step-item.active .step-num{border-color:var(--gold);color:var(--gold);background:var(--gold-d);}
+.step-item.done .step-num{border-color:var(--success);color:#000;background:var(--success);font-size:12px;}
+.step-info{}
+.step-label{font-size:13px;color:var(--white);font-weight:500;margin-bottom:2px;}
+.step-item.done .step-label{color:var(--muted);}
+.step-desc{font-size:11px;color:var(--muted);}
+/* Right: content panel */
+.app-main{background:var(--bg);padding:36px;}
+.step-panel{display:none;}
+.step-panel.active{display:block;}
+.panel-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--white);margin-bottom:6px;}
+.panel-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6;}
+
+/* ══════════════════════════════════════════════
+   UPLOAD ZONES
+══════════════════════════════════════════════ */
+.upload-zone{position:relative;border:1px dashed var(--border2);border-radius:8px;background:var(--s2);transition:all .25s;overflow:hidden;}
+.upload-zone:hover{border-color:var(--gold);background:var(--gold-d);}
+.upload-zone.has-file{border-color:var(--gold);border-style:solid;}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 20px;pointer-events:none;}
+.upload-icon{font-size:32px;}
+.upload-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--white);}
+.upload-sub{font-size:11px;color:var(--muted);text-align:center;}
+.upload-preview{width:100%;height:100%;object-fit:cover;display:none;border-radius:7px;}
+.upload-preview.visible{display:block;}
+/* Main upload large */
+.upload-main{height:280px;}
+.upload-main .upload-placeholder{padding:60px 20px;}
+.upload-main .upload-icon{font-size:42px;}
+.upload-main .upload-title{font-size:18px;}
+/* Compare uploads row */
+.upload-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}
+.upload-compare{height:160px;}
+.upload-compare .upload-placeholder{padding:20px;}
+.upload-compare .upload-icon{font-size:24px;}
+.upload-compare .upload-title{font-size:13px;}
+.upload-compare .upload-sub{font-size:10px;}
+/* Upload slot label */
+.upload-slot-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+/* Remove button */
+.remove-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);border:1px solid var(--border2);color:var(--text);width:24px;height:24px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:12px;z-index:2;transition:all .2s;}
+.upload-zone.has-file .remove-btn{display:flex;}
+.remove-btn:hover{background:rgba(248,113,113,.2);border-color:var(--danger);color:var(--danger);}
+/* Privacy note */
+.privacy-note{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);margin-top:12px;}
+.privacy-note::before{content:'🔒';font-size:12px;}
+
+/* ══════════════════════════════════════════════
+   GROUP PHOTO SELECTOR
+══════════════════════════════════════════════ */
+.group-toggle{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:6px;cursor:pointer;}
+.toggle-switch{width:36px;height:20px;background:var(--border2);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+.toggle-switch::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--bg);top:3px;left:3px;transition:transform .2s;}
+.group-toggle.on .toggle-switch{background:var(--gold);}
+.group-toggle.on .toggle-switch::after{transform:translateX(16px);}
+.toggle-text{font-size:12px;color:var(--text);}
+.group-selector{display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.group-selector.visible{display:block;}
+.group-selector-header{padding:12px 14px;background:var(--s2);border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);}
+.group-selector-body{padding:14px;}
+.group-selector p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+.person-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.person-btn{background:var(--s3);border:1px solid var(--border);padding:8px 16px;border-radius:4px;font-size:11px;color:var(--text);transition:all .2s;}
+.person-btn:hover,.person-btn.selected{border-color:var(--gold);background:var(--gold-d);color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   FACE SCAN
+══════════════════════════════════════════════ */
+.optional-badge{display:inline-block;background:var(--s3);border:1px solid var(--border);color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 10px;border-radius:2px;margin-bottom:20px;}
+.face-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.face-slot{position:relative;border:1px dashed var(--border2);border-radius:8px;aspect-ratio:3/4;background:var(--s2);overflow:hidden;transition:all .25s;}
+.face-slot:hover{border-color:var(--gold);background:var(--gold-d);}
+.face-slot.has-file{border-color:var(--gold);border-style:solid;}
+.face-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.face-slot-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100%;pointer-events:none;}
+.face-slot-icon{font-size:28px;}
+.face-slot-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;}
+.face-slot-check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--success);color:#000;font-size:11px;display:none;align-items:center;justify-content:center;}
+.face-slot.has-file .face-slot-check{display:flex;}
+.face-slot .upload-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.face-scan-info{margin-top:20px;background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--gold);padding:14px 16px;border-radius:0 6px 6px 0;}
+.face-scan-info p{font-size:12px;line-height:1.7;color:var(--text);}
+.face-scan-info strong{color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   OCCASION GRID
+══════════════════════════════════════════════ */
+.occ-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.occ-btn{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:18px 12px;text-align:center;transition:all .2s;}
+.occ-btn:hover{border-color:var(--gold);background:var(--gold-d);}
+.occ-btn.selected{border-color:var(--gold);background:var(--gold-d);}
+.occ-icon{font-size:24px;margin-bottom:8px;}
+.occ-name{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);transition:color .2s;}
+.occ-btn:hover .occ-name,.occ-btn.selected .occ-name{color:var(--white);}
+
+/* ══════════════════════════════════════════════
+   BUY THIS ITEM MODE
+══════════════════════════════════════════════ */
+.buy-mode-note{background:var(--gold-d);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:14px 16px;margin-bottom:24px;}
+.buy-mode-note p{font-size:12px;line-height:1.7;color:var(--text);}
+.buy-mode-note strong{color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   ANALYZE BUTTON + FOOTER
+══════════════════════════════════════════════ */
+.app-footer{padding:24px 36px;background:var(--s1);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.app-footer-note{font-size:12px;color:var(--muted);}
+.analyze-btn{background:var(--gold);color:#000;border:none;padding:14px 40px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;border-radius:2px;transition:all .2s;box-shadow:0 4px 20px rgba(201,168,76,.2);}
+.analyze-btn:hover{background:var(--gold-l);transform:translateY(-1px);}
+.analyze-btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;box-shadow:none;transform:none;}
+.nav-step-btns{display:flex;gap:10px;}
+.nav-prev{background:none;border:1px solid var(--border);color:var(--muted);padding:12px 20px;font-family:'Outfit',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.nav-prev:hover{border-color:var(--border2);color:var(--text);}
+.nav-next{background:var(--s2);border:1px solid var(--border2);color:var(--text);padding:12px 24px;font-family:'Outfit',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.nav-next:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   LOADING OVERLAY
+══════════════════════════════════════════════ */
+#loading-overlay{position:fixed;inset:0;background:rgba(9,9,11,.96);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;gap:28px;}
+#loading-overlay.on{display:flex;}
+.loading-logo{font-family:'Playfair Display',serif;font-size:28px;letter-spacing:.4em;color:var(--white);}
+.loading-logo em{font-style:normal;color:var(--gold);}
+.spin{width:56px;height:56px;border:1px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin 1.2s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-steps{display:flex;flex-direction:column;gap:10px;}
+.ls{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);transition:color .3s;}
+.ls.active{color:var(--white);}
+.ls.done{color:var(--success);}
+.ls-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background .3s;}
+.ls.active .ls-dot{background:var(--gold);}
+.ls.done .ls-dot{background:var(--success);}
+.loading-note{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+
+/* ══════════════════════════════════════════════
+   RESULTS SECTION
+══════════════════════════════════════════════ */
+.results-layout{display:grid;grid-template-columns:280px 1fr;gap:0;background:var(--border);}
+.results-photo-col{background:var(--s1);padding:24px;position:sticky;top:80px;align-self:start;}
+.photo-preview-box{aspect-ratio:3/4;background:var(--s2);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.photo-preview-box img{width:100%;height:100%;object-fit:cover;}
+.photo-preview-placeholder{text-align:center;padding:20px;}
+.photo-preview-placeholder p{font-size:12px;color:var(--muted);}
+.photo-meta{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.photo-occ{font-family:'Playfair Display',serif;font-size:15px;color:var(--white);}
+.person-note{font-size:11px;color:var(--gold);margin-top:6px;}
+.results-main{background:var(--bg);padding:28px;}
+/* API Integration Banner */
+.api-note{background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;}
+.api-note-icon{font-size:16px;flex-shrink:0;}
+.api-note p{font-size:11px;color:var(--text);line-height:1.6;}
+.api-note p strong{color:var(--gold);}
+/* Result sections */
+.result-verdict-header{margin-bottom:24px;}
+.verdict-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.verdict-main{font-family:'Playfair Display',serif;font-size:28px;color:var(--white);margin-bottom:12px;line-height:1.1;}
+.verdict-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 16px;border-radius:2px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;}
+.vb-good{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.25);color:var(--success);}
+.vb-average{background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.25);color:var(--warn);}
+.vb-poor{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);color:var(--danger);}
+/* Score breakdown */
+.score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+.score-card{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px;}
+.sc-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.sc-num{font-family:'DM Mono',monospace;font-size:26px;color:var(--white);line-height:1;margin-bottom:6px;}
+.sc-num.low{color:var(--danger);}
+.sc-num.mid{color:var(--warn);}
+.sc-num.high{color:var(--success);}
+.sc-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.sc-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.4,0,.2,1);}
+.sc-fill-gold{background:var(--gold);}
+.sc-fill-warn{background:var(--warn);}
+.sc-fill-ok{background:var(--success);}
+.sc-fill-low{background:var(--danger);}
+/* Result block */
+.result-block{margin-bottom:20px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.rb-header{padding:12px 16px;background:var(--s1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.rb-icon{font-size:16px;}
+.rb-title{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);}
+.rb-count{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.rb-body{padding:16px;}
+.rb-item{display:flex;gap:10px;font-size:13px;line-height:1.6;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);}
+.rb-item:last-child{border-bottom:none;}
+.rb-arrow{flex-shrink:0;color:var(--gold);font-size:12px;margin-top:2px;}
+.rb-arrow.bad{color:var(--danger);}
+.rb-arrow.warn{color:var(--warn);}
+.rb-arrow.ok{color:var(--success);}
+/* Outfit pick */
+.outfit-pick{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;}
+.op-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
+.op-items{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.op-item{background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:6px 12px;font-size:12px;color:var(--text);}
+.op-plus{color:var(--muted);font-size:14px;}
+/* Final rec */
+.final-rec{background:var(--gold-d);border:1px solid rgba(201,168,76,.2);border-radius:8px;padding:18px;}
+.fr-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+.fr-text{font-family:'Playfair Display',serif;font-size:15px;color:var(--white);line-height:1.6;font-style:italic;}
+/* Buy mode result */
+.buy-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.brc{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:14px;}
+.brc-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.brc-value{font-family:'Playfair Display',serif;font-size:18px;color:var(--white);}
+.brc-value.pos{color:var(--success);}
+.brc-value.neg{color:var(--danger);}
+.brc-value.mid{color:var(--warn);}
+/* Retry / new analysis */
+.result-actions{display:flex;gap:10px;margin-top:24px;}
+.ra-btn{padding:12px 24px;font-family:'Outfit',sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.ra-primary{background:var(--gold);color:#000;border:1px solid var(--gold);}
+.ra-primary:hover{background:var(--gold-l);}
+.ra-secondary{background:transparent;border:1px solid var(--border2);color:var(--text);}
+.ra-secondary:hover{border-color:var(--gold);color:var(--gold);}
+/* Empty result state (waiting for API) */
+.result-empty{text-align:center;padding:60px 40px;}
+.result-empty-icon{font-size:48px;margin-bottom:20px;}
+.result-empty h3{font-family:'Playfair Display',serif;font-size:22px;color:var(--white);margin-bottom:10px;}
+.result-empty p{font-size:14px;color:var(--muted);line-height:1.7;max-width:400px;margin:0 auto;}
+
+/* ══════════════════════════════════════════════
+   FEATURES SECTION
+══════════════════════════════════════════════ */
+.features-section{background:var(--s1);}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:56px;}
+.feat-card{background:var(--s1);padding:36px;transition:background .3s;position:relative;}
+.feat-card:hover{background:var(--s2);}
+.feat-card.featured::after{content:'Core';position:absolute;top:14px;right:14px;background:var(--gold-d);border:1px solid rgba(201,168,76,.2);color:var(--gold);font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:3px 9px;}
+.feat-icon{width:44px;height:44px;background:var(--gold-d);border:1px solid rgba(201,168,76,.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:20px;}
+.feat-card h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--white);margin-bottom:9px;font-weight:600;}
+.feat-card p{font-size:13px;line-height:1.7;color:var(--muted);}
+
+/* ══════════════════════════════════════════════
+   PRICING
+══════════════════════════════════════════════ */
+#pricing{scroll-margin-top:80px;}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-top:56px;}
+.plan{background:var(--s1);padding:40px 32px;position:relative;}
+.plan.featured{background:var(--bg);border-top:2px solid var(--gold);}
+.plan-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:4px 16px;font-weight:600;}
+.plan-name{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.plan-price{font-family:'Playfair Display',serif;font-size:52px;color:var(--white);line-height:1;margin-bottom:7px;}
+.plan-price sub{font-size:20px;vertical-align:super;font-family:'Outfit',sans-serif;}
+.plan-price span{font-size:14px;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:300;}
+.plan-desc{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+.plan-unlock{font-size:11px;color:var(--gold);margin-bottom:24px;}
+.plan-feats{list-style:none;margin-bottom:28px;}
+.plan-feats li{padding:9px 0;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;}
+.plan-feats li::before{content:'◈';color:var(--gold);font-size:9px;flex-shrink:0;}
+.plan-feats li.off{color:var(--muted);}
+.plan-feats li.off::before{content:'◈';color:var(--border);}
+.plan-btn{width:100%;padding:13px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;border-radius:2px;transition:all .2s;}
+.pb-gold{background:var(--gold);border:1px solid var(--gold);color:#000;}
+.pb-gold:hover{background:var(--gold-l);}
+.pb-outline{background:transparent;border:1px solid var(--border2);color:var(--muted);}
+.pb-outline:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ══════════════════════════════════════════════
+   AD MODAL
+══════════════════════════════════════════════ */
+#ad-modal{position:fixed;inset:0;background:rgba(9,9,11,.95);z-index:600;display:none;align-items:center;justify-content:center;}
+#ad-modal.on{display:flex;}
+.ad-box{background:var(--s1);border:1px solid var(--border);border-radius:12px;width:440px;overflow:hidden;}
+.ad-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ad-header-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--white);}
+.ad-close-btn{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.ad-screen{height:220px;background:var(--s2);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);}
+.ad-screen-inner{text-align:center;}
+.ad-screen-inner p{font-size:13px;color:var(--muted);margin-bottom:8px;}
+.ad-timer{font-family:'DM Mono',monospace;font-size:32px;color:var(--white);}
+.ad-progress-bar{height:3px;background:var(--border);transition:none;}
+.ad-progress-fill{height:100%;background:var(--gold);width:0;transition:width linear;}
+.ad-footer{padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.ad-footer p{font-size:12px;color:var(--muted);}
+.ad-claim-btn{background:var(--gold);color:#000;border:none;padding:10px 24px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;cursor:pointer;opacity:.4;}
+.ad-claim-btn.ready{opacity:1;}
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+footer{background:var(--s1);border-top:1px solid var(--border);padding:64px 48px 36px;}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:56px;margin-bottom:44px;}
+.footer-brand-logo{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:.35em;color:var(--white);display:block;margin-bottom:14px;}
+.footer-brand-logo em{font-style:normal;color:var(--gold);}
+.footer-brand p{font-size:13px;color:var(--muted);line-height:1.7;max-width:250px;}
+.footer-col h4{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:18px;}
+.footer-col a{display:block;color:var(--muted);text-decoration:none;font-size:12px;margin-bottom:9px;transition:color .2s;}
+.footer-col a:hover{color:var(--white);}
+.footer-bottom{border-top:1px solid var(--border);padding-top:20px;display:flex;justify-content:space-between;align-items:center;}
+.footer-bottom p{font-size:11px;color:var(--muted);}
+.footer-bottom em{color:var(--gold);font-style:normal;}
+
+/* ══════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════ */
+.divider{height:1px;background:var(--border);margin:24px 0;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+.tag{padding:4px 11px;border-radius:2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+.tag-good{background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.2);color:var(--success);}
+.tag-warn{background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.2);color:var(--warn);}
+.tag-bad{background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.2);color:var(--danger);}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0;}
+
+/* ══════════════════════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════════════════════ */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease;}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
+@media(max-width:1100px){
+  .hero-cards{display:none;}
+  .app-wrap{grid-template-columns:1fr;}
+  .app-sidebar{position:static;}
+  .results-layout{grid-template-columns:1fr;}
+  .results-photo-col{position:static;}
+  nav{padding:14px 22px;}
+  .nav-center{display:none;}
+  .container{padding:0 22px;}
+  .hero{padding:100px 22px 60px;}
+  .section{padding:64px 0;}
+  .hiw-grid{grid-template-columns:repeat(3,1fr);}
+  .feat-grid{grid-template-columns:1fr 1fr;}
+  .pricing-grid,.grid-3{grid-template-columns:1fr;background:none;gap:14px;}
+  .plan{border:1px solid var(--border);}
+  .score-grid{grid-template-columns:repeat(2,1fr);}
+  .footer-grid{grid-template-columns:1fr 1fr;gap:32px;}
+  .stats-bar{flex-wrap:wrap;}
+  .stat{min-width:50%;}
+  .occ-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:640px){
+  h1{font-size:44px;}
+  h2{font-size:32px;}
+  .hero{padding:96px 16px 48px;}
+  .container{padding:0 16px;}
+  .section{padding:48px 0;}
+  .hiw-grid{grid-template-columns:1fr 1fr;}
+  .feat-grid{grid-template-columns:1fr;}
+  .stats-bar{flex-direction:column;}
+  .stat{border-right:none;border-bottom:1px solid var(--border);}
+  nav{padding:12px 16px;}
+  .upload-row{grid-template-columns:1fr;}
+  .buy-result-grid{grid-template-columns:1fr;}
+  .footer-grid{grid-template-columns:1fr;}
+  .score-grid{grid-template-columns:1fr 1fr;}
+  .face-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cur" aria-hidden="true"></div>
+<div id="cur-r" aria-hidden="true"></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" role="status" aria-live="polite">
+  <div class="loading-logo">MIR<em>O</em>R</div>
+  <div class="spin"></div>
+  <div class="loading-steps">
+    <div class="ls active" id="ls0"><div class="ls-dot"></div>Reading uploaded image</div>
+    <div class="ls" id="ls1"><div class="ls-dot"></div>Mapping facial structure</div>
+    <div class="ls" id="ls2"><div class="ls-dot"></div>Evaluating outfit and colors</div>
+    <div class="ls" id="ls3"><div class="ls-dot"></div>Checking occasion context</div>
+    <div class="ls" id="ls4"><div class="ls-dot"></div>Preparing your report</div>
+  </div>
+  <p class="loading-note">This may take a few seconds</p>
+</div>
+
+<!-- AD MODAL -->
+<div id="ad-modal" role="dialog" aria-label="Watch ad to unlock free analysis">
+  <div class="ad-box">
+    <div class="ad-header">
+      <span class="ad-header-title">Watch to unlock free analysis</span>
+      <button class="ad-close-btn" onclick="closeAdModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="ad-screen">
+      <div class="ad-screen-inner">
+        <p>Your ad will appear here</p>
+        <div class="ad-timer" id="adTimer">5</div>
+        <p style="font-size:11px;margin-top:8px;color:var(--muted)">Rewarded video slot — integrate your ad network SDK here</p>
+      </div>
+    </div>
+    <div class="ad-progress-bar"><div class="ad-progress-fill" id="adProgressFill"></div></div>
+    <div class="ad-footer">
+      <p>Watching earns you 1 free full analysis</p>
+      <button class="ad-claim-btn" id="adClaimBtn" onclick="claimAdReward()" disabled>Claim Analysis</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     NAV
+══════════════════════════════════════════════ -->
+<nav id="main-nav">
+  <div class="logo">MIR<em>O</em>R</div>
+  <div class="nav-center">
+    <a href="#app-section">Analyze</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#how">How It Works</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
+      <span class="theme-toggle-icon" id="themeIcon">☀️</span>
+      <span class="theme-toggle-label" id="themeLabel">Light</span>
+    </button>
+    <button class="nav-btn" onclick="scrollToSection('pricing')">Pricing</button>
+    <button class="nav-cta" onclick="scrollToSection('app-section')">Analyze My Look</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid-lines"></div>
+  <div class="hero-content">
+    <div class="badge"><span class="badge-dot"></span>AI Style Coach — Honest. Direct. Fast.</div>
+    <h1>Look your<em>best.</em><br/>Know why.</h1>
+    <p class="hero-sub">Upload a photo, scan your face from multiple angles, and get an honest AI assessment of your outfit, grooming, and overall appearance — before you leave the house.</p>
+    <div class="hero-actions">
+      <button class="btn-gold" onclick="scrollToSection('app-section')">Start My Analysis</button>
+      <button class="btn-outline" onclick="scrollToSection('how')">How It Works</button>
+    </div>
+  </div>
+  <div class="hero-cards" aria-hidden="true">
+    <div class="hc">
+      <div class="hc-label">◈ Honest Score · Date Night</div>
+      <div class="hc-title">Appearance Assessment</div>
+      <div class="hc-row"><div class="hc-name">Outfit</div><div class="hc-bar"><div class="hc-fill" style="width:62%"></div></div><div class="hc-num">62</div></div>
+      <div class="hc-row"><div class="hc-name">Color fit</div><div class="hc-bar"><div class="hc-fill" style="width:74%"></div></div><div class="hc-num">74</div></div>
+      <div class="hc-row"><div class="hc-name">Grooming</div><div class="hc-bar"><div class="hc-fill" style="width:81%"></div></div><div class="hc-num">81</div></div>
+      <div class="hc-verdict">⚠ Average — 2 things need fixing</div>
+    </div>
+    <div class="hc">
+      <div class="hc-label">◈ Item Check</div>
+      <div class="hc-title">Should I Buy This?</div>
+      <div class="hc-row"><div class="hc-name">Versatility</div><div class="hc-bar"><div class="hc-fill" style="width:88%"></div></div><div class="hc-num">88</div></div>
+      <div class="hc-row"><div class="hc-name">Value</div><div class="hc-bar"><div class="hc-fill" style="width:72%"></div></div><div class="hc-num">72</div></div>
+      <div class="hc-verdict">✓ Worth buying for most wardrobes</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat reveal"><div class="stat-n">4.<span>8K</span></div><div class="stat-d">Looks Analyzed</div></div>
+  <div class="stat reveal"><div class="stat-n">4 <span>Angles</span></div><div class="stat-d">Face Scan Depth</div></div>
+  <div class="stat reveal"><div class="stat-n">&lt;30<span>s</span></div><div class="stat-d">Analysis Time</div></div>
+  <div class="stat reveal"><div class="stat-n">No<span>BS</span></div><div class="stat-d">Honest Scoring Only</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════ -->
+<section id="app-section" style="padding:80px 0 0;">
+  <div class="container">
+    <div class="sec-tag">The Coach</div>
+    <h2>Your appearance,<em>analyzed honestly.</em></h2>
+    <p class="sec-sub">No inflated scores. No empty compliments. Upload your photo and get the unfiltered truth about what works, what doesn't, and what to change.</p>
+  </div>
+
+  <div class="app-wrap">
+    <!-- SIDEBAR -->
+    <div class="app-sidebar">
+      <div class="app-sidebar-header">
+        <div class="app-sidebar-title">Analysis Flow</div>
+        <div class="app-sidebar-sub" id="sidebar-mode-label">Style Check Mode</div>
+      </div>
+
+      <!-- MODE SWITCHER -->
+      <div class="mode-tabs" role="tablist">
+        <button class="mode-tab active" role="tab" aria-selected="true" onclick="setMode('style',this)" id="mode-style">Style Check</button>
+        <button class="mode-tab" role="tab" aria-selected="false" onclick="setMode('buy',this)" id="mode-buy">Buy This Item?</button>
+      </div>
+
+      <!-- STEPS -->
+      <div class="steps-list" id="steps-nav">
+        <!-- Steps injected by JS -->
+      </div>
+
+      <div style="padding:0 28px 28px;">
+        <button class="analyze-btn" id="main-analyze-btn" onclick="startAnalysis()" style="width:100%" disabled>
+          Run Analysis
+        </button>
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.5" id="analyze-note">
+          Complete required steps to unlock
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="app-main" id="app-main">
+
+      <!-- ── STEP: UPLOAD LOOK ── -->
+      <div class="step-panel active" id="panel-upload">
+        <div class="panel-title">Upload Your Look</div>
+        <p class="panel-sub">Upload a selfie or full-body photo showing what you're wearing. Optionally add up to 2 more outfits for comparison. The AI will analyze your face, skin tone, and outfit together.</p>
+
+        <!-- Main upload -->
+        <div class="upload-slot-label">Main Photo — What you're wearing now</div>
+        <div class="upload-zone upload-main" id="uz-main">
+          <input type="file" accept="image/*" id="file-main" onchange="handleUpload('file-main','uz-main','prev-main')" aria-label="Upload main photo"/>
+          <div class="upload-placeholder">
+            <div class="upload-icon">📷</div>
+            <div class="upload-title">Upload selfie or full-body photo</div>
+            <p class="upload-sub">JPG, PNG, WEBP — show face + outfit for best results</p>
+          </div>
+          <img class="upload-preview" id="prev-main" src="" alt="Your uploaded photo"/>
+          <button class="remove-btn" onclick="removeUpload('uz-main','file-main','prev-main',event)" aria-label="Remove photo">✕</button>
+        </div>
+
+        <!-- Group photo toggle -->
+        <div class="group-toggle" id="group-toggle" onclick="toggleGroup()" style="display:none">
+          <div class="toggle-switch" id="group-switch"></div>
+          <span class="toggle-text">Multiple people in this photo — select yourself</span>
+        </div>
+        <div class="group-selector" id="group-selector">
+          <div class="group-selector-header">◈ Who should the AI analyze?</div>
+          <div style="padding:14px">
+            <p>Click to indicate where you are in the photo. The AI will focus only on your outfit and appearance.</p>
+            <div class="person-btns">
+              <button class="person-btn" onclick="selectPerson(this,'left')">Left person</button>
+              <button class="person-btn" onclick="selectPerson(this,'center')">Center person</button>
+              <button class="person-btn" onclick="selectPerson(this,'right')">Right person</button>
+              <button class="person-btn" onclick="selectPerson(this,'other')">Other / Describe</button>
+            </div>
+            <div id="person-note" style="font-size:11px;color:var(--gold);margin-top:8px;display:none"></div>
+          </div>
+        </div>
+
+        <!-- Compare outfits -->
+        <div style="margin-top:24px">
+          <div class="upload-slot-label">Compare Outfits — Optional. Upload up to 2 more looks to compare</div>
+          <div class="upload-row">
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.08em">Look 2</div>
+              <div class="upload-zone upload-compare" id="uz-compare-2">
+                <input type="file" accept="image/*" id="file-compare-2" onchange="handleUpload('file-compare-2','uz-compare-2','prev-compare-2')" aria-label="Upload look 2"/>
+                <div class="upload-placeholder">
+                  <div class="upload-icon">➕</div>
+                  <div class="upload-title">Look 2</div>
+                  <p class="upload-sub">Optional</p>
+                </div>
+                <img class="upload-preview" id="prev-compare-2" src="" alt="Look 2"/>
+                <button class="remove-btn" onclick="removeUpload('uz-compare-2','file-compare-2','prev-compare-2',event)" aria-label="Remove">✕</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:.08em">Look 3</div>
+              <div class="upload-zone upload-compare" id="uz-compare-3">
+                <input type="file" accept="image/*" id="file-compare-3" onchange="handleUpload('file-compare-3','uz-compare-3','prev-compare-3')" aria-label="Upload look 3"/>
+                <div class="upload-placeholder">
+                  <div class="upload-icon">➕</div>
+                  <div class="upload-title">Look 3</div>
+                  <p class="upload-sub">Optional</p>
+                </div>
+                <img class="upload-preview" id="prev-compare-3" src="" alt="Look 3"/>
+                <button class="remove-btn" onclick="removeUpload('uz-compare-3','file-compare-3','prev-compare-3',event)" aria-label="Remove">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="privacy-note">Photos are processed privately. Nothing is stored without your consent.</div>
+      </div>
+
+      <!-- ── STEP: BUY THIS ITEM (Buy Mode) ── -->
+      <div class="step-panel" id="panel-buy-upload">
+        <div class="panel-title">Upload the Item</div>
+        <p class="panel-sub">Upload a photo of the clothing item you're considering buying. The AI will evaluate it against your style, wardrobe needs, and whether it's actually worth the money.</p>
+        <div class="buy-mode-note">
+          <p><strong>How this works:</strong> The AI evaluates the item on its own merits — quality signals, versatility, color value, and whether it's likely to work with a typical wardrobe. For best results, upload a clear photo of just the item.</p>
+        </div>
+        <div class="upload-zone upload-main" id="uz-buy">
+          <input type="file" accept="image/*" id="file-buy" onchange="handleUpload('file-buy','uz-buy','prev-buy')" aria-label="Upload item"/>
+          <div class="upload-placeholder">
+            <div class="upload-icon">🛍️</div>
+            <div class="upload-title">Upload clothing item photo</div>
+            <p class="upload-sub">Clear product shot or worn photo — JPG, PNG, WEBP</p>
+          </div>
+          <img class="upload-preview" id="prev-buy" src="" alt="Item photo"/>
+          <button class="remove-btn" onclick="removeUpload('uz-buy','file-buy','prev-buy',event)" aria-label="Remove">✕</button>
+        </div>
+        <div class="privacy-note">Photos are processed privately. Nothing is stored without your consent.</div>
+      </div>
+
+      <!-- ── STEP: FACE SCAN ── -->
+      <div class="step-panel" id="panel-face">
+        <div class="panel-title">Face Scan</div>
+        <div class="optional-badge">Optional — Improves accuracy significantly</div>
+        <p class="panel-sub">Upload photos from four angles. The more angles provided, the more precise the haircut, beard, collar, and color advice. You can skip and use your main photo only.</p>
+
+        <div class="face-grid">
+          <div>
+            <div class="upload-slot-label">Front — straight on</div>
+            <div class="face-slot" id="face-front">
+              <input type="file" accept="image/*" id="file-face-front" onchange="handleFaceScan('file-face-front','face-front','prev-face-front')" aria-label="Upload front face photo"/>
+              <div class="face-slot-inner">
+                <div class="face-slot-icon">🧑</div>
+                <div class="face-slot-label">Tap to upload</div>
+              </div>
+              <img class="upload-preview" id="prev-face-front" src="" alt="Front face"/>
+              <div class="face-slot-check">✓</div>
+            </div>
+          </div>
+          <div>
+            <div class="upload-slot-label">Left profile</div>
+            <div class="face-slot" id="face-left">
+              <input type="file" accept="image/*" id="file-face-left" onchange="handleFaceScan('file-face-left','face-left','prev-face-left')" aria-label="Upload left profile"/>
+              <div class="face-slot-inner">
+                <div class="face-slot-icon">👤</div>
+                <div class="face-slot-label">Left side</div>
+              </div>
+              <img class="upload-preview" id="prev-face-left" src="" alt="Left profile"/>
+              <div class="face-slot-check">✓</div>
+            </div>
+          </div>
+          <div>
+            <div class="upload-slot-label">Right profile</div>
+            <div class="face-slot" id="face-right">
+              <input type="file" accept="image/*" id="file-face-right" onchange="handleFaceScan('file-face-right','face-right','prev-face-right')" aria-label="Upload right profile"/>
+              <div class="face-slot-inner">
+                <div class="face-slot-icon">👤</div>
+                <div class="face-slot-label">Right side</div>
+              </div>
+              <img class="upload-preview" id="prev-face-right" src="" alt="Right profile"/>
+              <div class="face-slot-check">✓</div>
+            </div>
+          </div>
+          <div>
+            <div class="upload-slot-label">3/4 angle</div>
+            <div class="face-slot" id="face-quarter">
+              <input type="file" accept="image/*" id="file-face-quarter" onchange="handleFaceScan('file-face-quarter','face-quarter','prev-face-quarter')" aria-label="Upload 3/4 angle"/>
+              <div class="face-slot-inner">
+                <div class="face-slot-icon">🙂</div>
+                <div class="face-slot-label">3/4 view</div>
+              </div>
+              <img class="upload-preview" id="prev-face-quarter" src="" alt="3/4 angle"/>
+              <div class="face-slot-check">✓</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="face-scan-info">
+          <p><strong>What the AI reads from your face scan:</strong> Face shape (oval, square, oblong, heart), skin undertone (warm/cool/neutral), jawline structure, cheekbone width, eye shape. This informs haircut direction, beard shaping, collar recommendations, and which colors sit well next to your face. Without a scan, advice defaults to general guidance.</p>
+        </div>
+      </div>
+
+      <!-- ── STEP: OCCASION ── -->
+      <div class="step-panel" id="panel-occasion">
+        <div class="panel-title">Choose Your Occasion</div>
+        <p class="panel-sub">Context changes what works. The same outfit that's perfect for a casual dinner falls flat in a job interview. Select where you're going.</p>
+        <div class="occ-grid">
+          <button class="occ-btn selected" onclick="pickOcc(this,'date')"><div class="occ-icon">💘</div><div class="occ-name">Date</div></button>
+          <button class="occ-btn" onclick="pickOcc(this,'party')"><div class="occ-icon">🎉</div><div class="occ-name">Party</div></button>
+          <button class="occ-btn" onclick="pickOcc(this,'work')"><div class="occ-icon">💼</div><div class="occ-name">Work</div></button>
+          <button class="occ-btn" onclick="pickOcc(this,'wedding')"><div class="occ-icon">💍</div><div class="occ-name">Wedding / Formal</div></button>
+          <button class="occ-btn" onclick="pickOcc(this,'interview')"><div class="occ-icon">🤝</div><div class="occ-name">Interview</div></button>
+          <button class="occ-btn" onclick="pickOcc(this,'casual')"><div class="occ-icon">😎</div><div class="occ-name">Casual</div></button>
+        </div>
+        <div style="margin-top:20px;padding:14px 16px;background:var(--s2);border:1px solid var(--border);border-radius:6px;">
+          <div style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:6px">Wardrobe — Optional</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6">If you've uploaded a photo with your outfit visible, the AI analyzes that directly. Wardrobe selection is an optional premium feature for users who want outfit combinations from saved items.</p>
+          <button style="margin-top:10px;background:none;border:1px dashed var(--border2);color:var(--muted);padding:8px 16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;cursor:not-allowed;font-family:'Outfit',sans-serif" disabled>Wardrobe Picks — Coach Plan</button>
+        </div>
+      </div>
+
+      <!-- ── STEP: RESULTS ── -->
+      <div class="step-panel" id="panel-results">
+        <!-- Results are injected here by renderResults() -->
+        <div class="result-empty" id="result-empty">
+          <div class="result-empty-icon">◈</div>
+          <h3>Analysis Ready</h3>
+          <p>Complete the steps and run your analysis. Results will appear here with full scoring, honest critique, and actionable recommendations.</p>
+        </div>
+        <div id="results-content" style="display:none">
+          <!-- Populated by renderResults() -->
+        </div>
+      </div>
+
+    </div><!-- /app-main -->
+  </div><!-- /app-wrap -->
+</section>
+
+<!-- ══════════════════════════════════════════════
+     HOW IT WORKS
+══════════════════════════════════════════════ -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="sec-tag">The Process</div>
+    <h2>Built for speed.<em>Built for honesty.</em></h2>
+    <p class="sec-sub">Six steps from upload to full honest verdict. The AI doesn't flatter — it coaches.</p>
+  </div>
+  <div class="hiw-grid">
+    <div class="hiw-step reveal"><div class="hiw-n">01 /</div><div class="hiw-icon">📷</div><h3>Upload Your Look</h3><p>Selfie or full-body photo. Outfit visible means outfit gets analyzed.</p></div>
+    <div class="hiw-step reveal"><div class="hiw-n">02 /</div><div class="hiw-icon">👥</div><h3>Group Photo?</h3><p>If multiple people are in the photo, you mark yourself. The AI ignores everyone else.</p></div>
+    <div class="hiw-step reveal"><div class="hiw-n">03 /</div><div class="hiw-icon">🔬</div><h3>Face Scan</h3><p>Four angles for precise face-shape, skin-tone, and jawline analysis. Optional but valuable.</p></div>
+    <div class="hiw-step reveal"><div class="hiw-n">04 /</div><div class="hiw-icon">🎯</div><h3>Occasion</h3><p>Where are you going? Context changes every recommendation.</p></div>
+    <div class="hiw-step reveal"><div class="hiw-n">05 /</div><div class="hiw-icon">🧠</div><h3>Honest Analysis</h3><p>No inflated scores. If it's average, the AI says so — and tells you what to fix.</p></div>
+    <div class="hiw-step reveal"><div class="hiw-n">06 /</div><div class="hiw-icon">📋</div><h3>Full Report</h3><p>Verdict, scores, what works, what hurts, what to change now, and a final recommendation.</p></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FEATURES
+══════════════════════════════════════════════ -->
+<section class="section features-section" id="features">
+  <div class="container">
+    <div class="sec-tag">What We Analyze</div>
+    <h2>More than a photo.<em>A complete read.</em></h2>
+    <p class="sec-sub">The AI coaches like a selective, experienced stylist — not a validation machine.</p>
+  </div>
+  <div class="feat-grid" style="margin:0 48px">
+    <div class="feat-card featured reveal">
+      <div class="feat-icon">🎨</div>
+      <h3>Skin Tone & Color Analysis</h3>
+      <p>Identifies warm, cool, or neutral undertones and maps which colors flatter vs. which fight your complexion. Includes colors to avoid near the face.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">✂️</div>
+      <h3>Haircut & Beard Advice</h3>
+      <p>Based on face shape and jaw structure from the face scan. Tells you which cuts balance your features and which ones work against you.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">👔</div>
+      <h3>Outfit Scoring & Comparison</h3>
+      <p>Scores outfit harmony, occasion fit, and color coherence. Ranks multiple uploaded looks and names the clear winner — and why the others lose.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">👥</div>
+      <h3>Group Photo Support</h3>
+      <p>Multiple people in the photo? You choose who gets analyzed. The AI ignores everyone else and focuses only on your selected look.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">🛍️</div>
+      <h3>Should I Buy This?</h3>
+      <p>Upload a clothing item. Get a verdict on quality, versatility, value, what's good, what's bad, and whether it will actually earn its place in your wardrobe.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">📊</div>
+      <h3>Honest Scoring Only</h3>
+      <p>Scores are calibrated to be selective. Average looks score average. High scores are earned. The AI includes mandatory criticism — never just compliments.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     PRICING
+══════════════════════════════════════════════ -->
+<section class="section" id="pricing" style="background:var(--s1);">
+  <div class="container">
+    <div class="sec-tag">Pricing</div>
+    <h2>Start with<em>one free look.</em></h2>
+    <p class="sec-sub">Free users unlock an analysis by watching a short rewarded ad. Subscribers get no ads, unlimited analyses, and the full coaching system.</p>
+  </div>
+  <div class="pricing-grid" style="margin:0 48px">
+    <div class="plan reveal">
+      <div class="plan-name">Free</div>
+      <div class="plan-price"><sub>$</sub>0<span>/mo</span></div>
+      <div class="plan-desc">Try the full analysis once.</div>
+      <div class="plan-unlock">🎬 Unlock via rewarded ad</div>
+      <ul class="plan-feats">
+        <li>1 full style analysis per ad watched</li>
+        <li>Honest scoring + verdict</li>
+        <li>What works / what hurts</li>
+        <li>Basic color suggestions</li>
+        <li class="off">Face scan (front only)</li>
+        <li class="off">Outfit comparison</li>
+        <li class="off">Saved analysis history</li>
+        <li class="off">Wardrobe memory</li>
+      </ul>
+      <button class="plan-btn pb-outline" onclick="openAdModal()">Watch Ad to Unlock</button>
+    </div>
+    <div class="plan featured reveal">
+      <div class="plan-badge">Most Popular</div>
+      <div class="plan-name">Coach</div>
+      <div class="plan-price"><sub>$</sub>9<span>/mo</span></div>
+      <div class="plan-desc">For people who take their appearance seriously.</div>
+      <div class="plan-unlock">No ads · Cancel anytime</div>
+      <ul class="plan-feats">
+        <li>Unlimited analyses — no ads</li>
+        <li>Full 4-angle face scan</li>
+        <li>Outfit comparison (up to 3 looks)</li>
+        <li>Should I Buy This? mode</li>
+        <li>Haircut + beard recommendations</li>
+        <li>Saved analysis history (30 days)</li>
+        <li class="off">Wardrobe memory</li>
+        <li class="off">Hairstyle simulation</li>
+      </ul>
+      <button class="plan-btn pb-gold" onclick="scrollToSection('app-section')">Start Coaching</button>
+    </div>
+    <div class="plan reveal">
+      <div class="plan-name">Pro</div>
+      <div class="plan-price"><sub>$</sub>19<span>/mo</span></div>
+      <div class="plan-desc">Everything, fully unlocked.</div>
+      <div class="plan-unlock">No ads · Priority processing</div>
+      <ul class="plan-feats">
+        <li>Everything in Coach</li>
+        <li>Wardrobe memory (unlimited items)</li>
+        <li>AI outfit combinations by occasion</li>
+        <li>Unlimited history</li>
+        <li>Hairstyle simulation — coming soon</li>
+        <li>Profile photo optimization</li>
+        <li>Weekly style report</li>
+        <li>Priority AI processing</li>
+      </ul>
+      <button class="plan-btn pb-outline">Go Pro</button>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:32px;padding:0 48px">
+    <p style="font-size:12px;color:var(--muted);line-height:1.7">Free tier unlocks one full analysis per rewarded ad watched. Subscribers pay once for unlimited access. All plans include honest, unfiltered scoring — no score inflation, no empty praise.</p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════ -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <span class="footer-brand-logo">MIR<em>O</em>R</span>
+      <p>Your private AI appearance coach. Honest, fast, and built around the only question that matters: <em style="color:var(--gold)">do I actually look good?</em></p>
+    </div>
+    <div class="footer-col"><h4>Product</h4><a href="#app-section">Analyze My Look</a><a href="#features">Features</a><a href="#pricing">Pricing</a><a onclick="setMode('buy',document.getElementById('mode-buy'));scrollToSection('app-section')" style="cursor:pointer">Should I Buy This?</a></div>
+    <div class="footer-col"><h4>Occasions</h4><a href="#">Date Prep</a><a href="#">Work & Interviews</a><a href="#">Events & Weddings</a><a href="#">Everyday Style</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Photo Deletion</a><a href="#">Contact</a></div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2025 MIROR. All rights reserved.</p>
+    <p>No fake scores. No empty praise. <em>◈</em></p>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ── CURSOR ── */
+const cur = document.getElementById('cur');
+const curR = document.getElementById('cur-r');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function tick() {
+  cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+  rx += (mx - rx) * 0.13; ry += (my - ry) * 0.13;
+  curR.style.left = rx + 'px'; curR.style.top = ry + 'px';
+  requestAnimationFrame(tick);
+})();
+
+/* ── NAV SCROLL ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('main-nav').classList.toggle('scrolled', window.scrollY > 40);
+});
+
+/* ── SCROLL TO SECTION ── */
+function scrollToSection(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── THEME TOGGLE ── */
+let currentTheme = 'dark';
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.getElementById('themeIcon').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+  document.getElementById('themeLabel').textContent = currentTheme === 'dark' ? 'Light' : 'Dark';
+}
+
+/* ── APP STATE ── */
+const state = {
+  mode: 'style',       // 'style' | 'buy'
+  currentStep: 0,
+  mainPhoto: null,     // { dataUrl, file }
+  comparePhotos: [null, null],
+  buyPhoto: null,
+  faceScan: { front: null, left: null, right: null, quarter: null },
+  occasion: 'date',
+  groupPhoto: false,
+  selectedPerson: null,
+  analysisComplete: false
+};
+
+/* ── STEPS DEFINITION ── */
+const STYLE_STEPS = [
+  { id: 'upload',   label: 'Upload Look',  desc: 'Required', panel: 'panel-upload'   },
+  { id: 'face',     label: 'Face Scan',    desc: 'Optional', panel: 'panel-face'     },
+  { id: 'occasion', label: 'Occasion',     desc: 'Required', panel: 'panel-occasion' },
+  { id: 'results',  label: 'Results',      desc: 'Final',    panel: 'panel-results'  },
+];
+const BUY_STEPS = [
+  { id: 'buy-upload', label: 'Upload Item',  desc: 'Required', panel: 'panel-buy-upload' },
+  { id: 'results',    label: 'Results',      desc: 'Final',    panel: 'panel-results'    },
+];
+
+function getSteps() { return state.mode === 'buy' ? BUY_STEPS : STYLE_STEPS; }
+
+/* ── RENDER STEP NAV ── */
+function renderStepNav() {
+  const steps = getSteps();
+  const nav = document.getElementById('steps-nav');
+  nav.innerHTML = steps.map((s, i) => `
+    <div class="step-item ${i === state.currentStep ? 'active' : i < state.currentStep ? 'done' : ''}"
+         onclick="goStep(${i})" role="button" tabindex="0" aria-current="${i === state.currentStep ? 'step' : false}">
+      <div class="step-num">${i < state.currentStep ? '✓' : i + 1}</div>
+      <div class="step-info">
+        <div class="step-label">${s.label}</div>
+        <div class="step-desc">${s.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── GO TO STEP ── */
+function goStep(n) {
+  const steps = getSteps();
+  if (n < 0 || n >= steps.length) return;
+  state.currentStep = n;
+  // Hide all panels
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  // Show current
+  const panel = document.getElementById(steps[n].panel);
+  if (panel) panel.classList.add('active');
+  renderStepNav();
+  updateAnalyzeBtn();
+  document.getElementById('app-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── SET MODE ── */
+function setMode(mode, btn) {
+  state.mode = mode;
+  state.currentStep = 0;
+  document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sidebar-mode-label').textContent =
+    mode === 'buy' ? 'Item Evaluation Mode' : 'Style Check Mode';
+  // Reset results
+  state.analysisComplete = false;
+  document.getElementById('result-empty').style.display = 'block';
+  document.getElementById('results-content').style.display = 'none';
+  renderStepNav();
+  goStep(0);
+}
+
+/* ── UPDATE ANALYZE BUTTON ── */
+function updateAnalyzeBtn() {
+  const btn = document.getElementById('main-analyze-btn');
+  const note = document.getElementById('analyze-note');
+  const ready = canAnalyze();
+  btn.disabled = !ready;
+  if (ready) {
+    btn.textContent = 'Run Analysis';
+    note.textContent = 'Click to get your honest report';
+  } else {
+    btn.textContent = 'Run Analysis';
+    note.textContent = state.mode === 'buy'
+      ? 'Upload an item photo to unlock'
+      : 'Upload a photo to unlock';
+  }
+}
+
+function canAnalyze() {
+  if (state.mode === 'buy') return !!state.buyPhoto;
+  return !!state.mainPhoto;
+}
+
+/* ── FILE UPLOAD HANDLER ── */
+function handleUpload(inputId, zoneId, previewId) {
+  const file = document.getElementById(inputId)?.files?.[0];
+  if (!file) return;
+  const zone = document.getElementById(zoneId);
+  const preview = document.getElementById(previewId);
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    preview.src = dataUrl;
+    preview.classList.add('visible');
+    zone.classList.add('has-file');
+    zone.querySelector('.upload-placeholder').style.display = 'none';
+    // Store in state
+    if (inputId === 'file-main') {
+      state.mainPhoto = { dataUrl, file };
+      document.getElementById('group-toggle').style.display = 'flex';
+      updateAnalyzeBtn();
+      // Mirror to result photo panel
+      const photoBox = document.getElementById('result-photo-img');
+      if (photoBox) { photoBox.src = dataUrl; photoBox.style.display = 'block'; }
+    } else if (inputId === 'file-compare-2') {
+      state.comparePhotos[0] = { dataUrl, file };
+    } else if (inputId === 'file-compare-3') {
+      state.comparePhotos[1] = { dataUrl, file };
+    } else if (inputId === 'file-buy') {
+      state.buyPhoto = { dataUrl, file };
+      updateAnalyzeBtn();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeUpload(zoneId, inputId, previewId, e) {
+  e.stopPropagation();
+  const zone = document.getElementById(zoneId);
+  const preview = document.getElementById(previewId);
+  const input = document.getElementById(inputId);
+  preview.src = ''; preview.classList.remove('visible');
+  zone.classList.remove('has-file');
+  zone.querySelector('.upload-placeholder').style.display = '';
+  if (input) input.value = '';
+  if (inputId === 'file-main') {
+    state.mainPhoto = null;
+    document.getElementById('group-toggle').style.display = 'none';
+    document.getElementById('group-toggle').classList.remove('on');
+    document.getElementById('group-selector').classList.remove('visible');
+    updateAnalyzeBtn();
+  }
+  if (inputId === 'file-buy') { state.buyPhoto = null; updateAnalyzeBtn(); }
+}
+
+/* ── FACE SCAN ── */
+function handleFaceScan(inputId, slotId, previewId) {
+  const file = document.getElementById(inputId)?.files?.[0];
+  if (!file) return;
+  const slot = document.getElementById(slotId);
+  const preview = document.getElementById(previewId);
+  const reader = new FileReader();
+  reader.onload = ev => {
+    preview.src = ev.target.result;
+    preview.classList.add('visible');
+    preview.style.cssText = 'display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+    slot.classList.add('has-file');
+    slot.querySelector('.face-slot-inner').style.opacity = '0';
+    const angle = slotId.split('-')[1]; // front/left/right/quarter
+    state.faceScan[angle] = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ── GROUP PHOTO ── */
+function toggleGroup() {
+  const toggle = document.getElementById('group-toggle');
+  const selector = document.getElementById('group-selector');
+  toggle.classList.toggle('on');
+  state.groupPhoto = toggle.classList.contains('on');
+  selector.classList.toggle('visible', state.groupPhoto);
+  if (!state.groupPhoto) { state.selectedPerson = null; }
+}
+function selectPerson(btn, position) {
+  document.querySelectorAll('.person-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.selectedPerson = position;
+  const note = document.getElementById('person-note');
+  note.style.display = 'block';
+  note.textContent = `◈ AI will analyze the ${position} person only`;
+}
+
+/* ── OCCASION ── */
+function pickOcc(btn, occ) {
+  document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.occasion = occ;
+}
+
+/* ── ANALYSIS ── */
+function startAnalysis() {
+  if (!canAnalyze()) return;
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.add('on');
+  const lsIds = ['ls0', 'ls1', 'ls2', 'ls3', 'ls4'];
+  lsIds.forEach(id => { const el = document.getElementById(id); if (el) el.className = 'ls'; });
+  let i = 0;
+  const el0 = document.getElementById(lsIds[0]);
+  if (el0) el0.classList.add('active');
+  const interval = setInterval(() => {
+    const done = document.getElementById(lsIds[i]);
+    if (done) done.className = 'ls done';
+    i++;
+    if (i < lsIds.length) {
+      const next = document.getElementById(lsIds[i]);
+      if (next) next.classList.add('active');
+    } else {
+      clearInterval(interval);
+      setTimeout(() => {
+        overlay.classList.remove('on');
+        state.analysisComplete = true;
+        // Go to results step
+        const steps = getSteps();
+        const ri = steps.findIndex(s => s.id === 'results');
+        if (ri !== -1) goStep(ri);
+        if (state.mode === 'buy') renderBuyResults();
+        else renderStyleResults();
+      }, 400);
+    }
+  }, 650);
+}
+
+/* ══════════════════════════════════════════════
+   RESULT RENDERING — API-READY STRUCTURE
+   
+   This function is designed to accept real API response data.
+   When backend integration is ready, call:
+     renderStyleResults(apiResponseData)
+   
+   The data shape expected from the API:
+   {
+     verdict: string,
+     verdictLevel: 'good'|'average'|'poor',
+     scores: { outfit: number, color: number, grooming: number, occasion: number, overall: number },
+     whatWorks: string[],
+     whatHurts: string[],    // MANDATORY — at least 1 item
+     changeNow: string[],    // MANDATORY — actionable
+     bestOutfit: string | null,
+     finalRec: string,
+     compareVerdict: string | null  // if multiple outfits uploaded
+   }
+══════════════════════════════════════════════ */
+
+// Demo data — replace with real API call
+const DEMO_RESULTS = {
+  date: {
+    verdict: 'Average. There are two problems you can fix in under five minutes.',
+    verdictLevel: 'average',
+    scores: { outfit: 62, color: 71, grooming: 80, occasion: 58, overall: 63 },
+    whatWorks: ['Skin tone suits the navy shade — that choice is working in your favor.', 'Grooming is clean and the beard is well-defined. This is doing real work.', 'Fit through the shoulders is decent — no obvious sizing issue there.'],
+    whatHurts: ['The trousers are too casual for a date. Jeans at this level read as low-effort, not relaxed.', 'The shirt pattern adds visual noise near the face. It competes with your features instead of framing them.', 'Overall occasion score is below average — this reads as "going to the shops," not "going on a date."'],
+    changeNow: ['Swap the jeans for your darkest available trousers right now. This fixes the occasion problem immediately.', 'If you have a solid or minimal-pattern shirt, switch to it. The pattern is the weakest element in this look.', 'Check the shoes — the rest is improvable but shoes will confirm or destroy the effort.'],
+    bestOutfit: 'Look 1 wins if comparison uploaded — but it needs the trouser change to actually earn its place.',
+    finalRec: 'This is a passable look with one obvious fix. Change the trousers and you move from average to solid. Keep the current outfit and you\'ll look like you didn\'t try.',
+  },
+  party: {
+    verdict: 'Solid. Works for a party but not memorable — one addition would sharpen it.',
+    verdictLevel: 'good',
+    scores: { outfit: 76, color: 80, grooming: 78, occasion: 84, overall: 79 },
+    whatWorks: ['The color combination is doing well — strong contrast without clashing.', 'Occasion fit is good. This reads as "shows up to a party," which is the minimum bar.', 'Grooming is presentable. Not exceptional, but not a liability.'],
+    whatHurts: ['The look is safe. Safe outfits at parties are forgettable. Nothing here makes you stand out.', 'Shoes appear to be an afterthought. Footwear is finishing the look below the rest of it.'],
+    changeNow: ['Add one statement element — a bold watch, a textured jacket layer, or an interesting accessory. You\'re one item away from memorable.', 'Check the shoes and elevate them if you can. A cleaner or bolder pair would lift everything above it.'],
+    bestOutfit: null,
+    finalRec: 'You\'re above average but playing it safe. For a party, safe is forgettable. One deliberate addition fixes this.',
+  },
+  work: {
+    verdict: 'Below expectations for a professional context. Easy to fix but needs attention.',
+    verdictLevel: 'average',
+    scores: { outfit: 60, color: 74, grooming: 82, occasion: 55, overall: 63 },
+    whatWorks: ['Grooming is actually the strongest element here — clean and appropriate.', 'Color choices are safe and won\'t cause problems.'],
+    whatHurts: ['The outfit reads as smart-casual at best, which is under-dressed for most work contexts.', 'No visible structure — a blazer or sports jacket would change this entirely.', 'Occasion score is below 60. This doesn\'t signal that you\'re taking the environment seriously.'],
+    changeNow: ['Add a blazer or structured jacket. This single item would push the score up by 15+ points.', 'Tuck in the shirt if you haven\'t — it adds 10 points of intentionality for free.', 'Ensure shoes match the level of the rest, or replace the lowest-quality element first.'],
+    bestOutfit: null,
+    finalRec: 'The grooming is there. The outfit isn\'t yet. Structure and formality are missing — both fixable before you leave.',
+  },
+  wedding: {
+    verdict: 'Under-dressed for a wedding. This needs real changes, not tweaks.',
+    verdictLevel: 'poor',
+    scores: { outfit: 42, color: 68, grooming: 79, occasion: 35, overall: 48 },
+    whatWorks: ['Skin tone analysis shows you suit the warm-neutral tones visible here.', 'Grooming is good — this will carry over regardless of what outfit changes you make.'],
+    whatHurts: ['This outfit does not belong at a wedding. The formality gap is significant.', 'Occasion fit score of 35 — this is the lowest category and it\'s pulling everything down.', 'You will stand out for the wrong reasons in a wedding context wearing this.'],
+    changeNow: ['A suit or blazer-and-dress-trouser combination is the minimum for a wedding. This isn\'t optional.', 'If you have a suit, wear it regardless of other factors.', 'Dress shoes are mandatory. Whatever you\'re wearing on your feet here needs to be replaced.'],
+    bestOutfit: null,
+    finalRec: 'Don\'t go to a wedding in this. The grooming is good — build a proper outfit around it. This isn\'t about taste, it\'s about respect for the occasion.',
+  },
+  interview: {
+    verdict: 'Good. Reads as prepared and intentional. One small detail would make it excellent.',
+    verdictLevel: 'good',
+    scores: { outfit: 82, color: 80, grooming: 90, occasion: 86, overall: 84 },
+    whatWorks: ['This look signals preparation, which is the primary job of an interview outfit.', 'Grooming is the strongest element — clean, controlled, nothing distracting.', 'Color palette is appropriate and non-distracting. Good instinct.', 'Occasion fit is strong — you\'ve read the environment correctly.'],
+    whatHurts: ['Wrinkles, if any, would be the main issue here. Ironing matters more than most people think.', 'One slight styling softness visible — the collar or cuffs could be sharper.'],
+    changeNow: ['Check for wrinkles and iron if needed. This is a 5-minute action that signals whether you pay attention to detail.', 'Ensure there are no loose threads or lint visible — small things signal big things in interviews.'],
+    bestOutfit: null,
+    finalRec: 'This is a strong interview look. Iron it. Walk in straight. The outfit is not the liability here.',
+  },
+  casual: {
+    verdict: 'Average casual. Presentable but not considered. A few small changes would make this deliberate.',
+    verdictLevel: 'average',
+    scores: { outfit: 68, color: 72, grooming: 70, occasion: 80, overall: 72 },
+    whatWorks: ['Occasion fit is the highest score here — this does read as casual correctly.', 'Colors are relatively coherent and not actively hurting the look.'],
+    whatHurts: ['The overall look is underwhelming for someone who might be seen. It reads as accidental.', 'Grooming is adequate but not purposeful — slight improvement would lift the whole look.', 'Nothing in the outfit says you made a choice. It says you grabbed the nearest things.'],
+    changeNow: ['Replace the weakest item — identify what\'s the most worn-looking piece and upgrade it.', 'A small grooming improvement (hair, beard line) would have an outsized effect on this look.'],
+    bestOutfit: null,
+    finalRec: 'Casual doesn\'t mean low-effort — it means appropriate for the context. This is fine for staying home. For being seen, give it five more minutes.',
+  },
+};
+
+function renderStyleResults(apiData) {
+  // Use demo data if no API data provided
+  const data = apiData || DEMO_RESULTS[state.occasion] || DEMO_RESULTS.casual;
+  const photoSrc = state.mainPhoto?.dataUrl;
+  const compareSrcs = state.comparePhotos.filter(Boolean).map(p => p.dataUrl);
+  const occLabels = { date: 'Date Night', party: 'Party', work: 'Work', wedding: 'Formal / Wedding', interview: 'Job Interview', casual: 'Casual' };
+  const vbClass = { good: 'vb-good', average: 'vb-average', poor: 'vb-poor' };
+  const vbIcon = { good: '✓', average: '⚠', poor: '✕' };
+  const vbText = { good: 'Strong Look', average: 'Average — Fix Needed', poor: 'Below Standard' };
+
+  function scoreClass(n) { return n >= 80 ? 'high' : n >= 65 ? 'mid' : 'low'; }
+  function fillClass(n) { return n >= 80 ? 'sc-fill-ok' : n >= 65 ? 'sc-fill-warn' : 'sc-fill-low'; }
+  function arrowClass(type) { return type === 'works' ? 'ok' : type === 'hurts' ? 'bad' : 'warn'; }
+  function arrowIcon(type) { return type === 'works' ? '✓' : type === 'hurts' ? '✕' : '→'; }
+
+  const scoreItems = [
+    { label: 'Outfit Harmony', key: 'outfit' },
+    { label: 'Color Fit', key: 'color' },
+    { label: 'Grooming', key: 'grooming' },
+    { label: 'Occasion Match', key: 'occasion' },
+    { label: 'Overall', key: 'overall' },
+  ];
+
+  const compareSection = compareSrcs.length > 0 ? `
+    <div class="result-block" style="margin-bottom:20px">
+      <div class="rb-header"><div class="rb-icon">👔</div><div class="rb-title">Outfit Comparison</div></div>
+      <div class="rb-body">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div style="text-align:center">
+            <img src="${photoSrc}" style="width:80px;height:100px;object-fit:cover;border-radius:4px;border:2px solid var(--gold)"/>
+            <div style="font-size:10px;color:var(--gold);margin-top:4px">Look 1 ✓</div>
+          </div>
+          ${compareSrcs.map((src, i) => `<div style="text-align:center"><img src="${src}" style="width:80px;height:100px;object-fit:cover;border-radius:4px;border:1px solid var(--border)"/><div style="font-size:10px;color:var(--muted);margin-top:4px">Look ${i + 2}</div></div>`).join('')}
+        </div>
+        <div class="rb-item"><span class="rb-arrow ok">✓</span><span>Look 1 selected as strongest. ${data.bestOutfit || 'Primary outfit analyzed above.'}</span></div>
+      </div>
+    </div>` : '';
+
+  const personNote = state.groupPhoto && state.selectedPerson
+    ? `<div class="person-note">◈ Analyzing ${state.selectedPerson} person only</div>` : '';
+
+  const html = `
+    <div class="results-layout">
+      <div class="results-photo-col">
+        <div class="photo-preview-box">
+          ${photoSrc
+            ? `<img src="${photoSrc}" alt="Your uploaded look" id="result-photo-img"/>`
+            : `<div class="photo-preview-placeholder"><p>No photo uploaded</p></div>`}
+        </div>
+        <div class="photo-meta">Analyzed</div>
+        <div class="photo-occ">${occLabels[state.occasion] || 'Style Check'}</div>
+        ${personNote}
+        ${state.faceScan.front ? '<div style="font-size:10px;color:var(--gold);margin-top:6px">◈ Face scan included</div>' : '<div style="font-size:10px;color:var(--muted);margin-top:6px">No face scan — basic analysis</div>'}
+      </div>
+
+      <div class="results-main">
+        <div class="api-note">
+          <div class="api-note-icon">⚙</div>
+          <p><strong>Demo Mode:</strong> These results are structured for real API integration. When the backend is connected, replace the demo data object with your <code>analyzeImage(imageData, occasion, faceScan)</code> response. The result structure is pre-built and API-ready.</p>
+        </div>
+
+        <div class="result-verdict-header">
+          <div class="verdict-label">◈ Verdict</div>
+          <div class="verdict-main">${data.verdict}</div>
+          <div class="verdict-badge ${vbClass[data.verdictLevel]}">${vbIcon[data.verdictLevel]} ${vbText[data.verdictLevel]}</div>
+        </div>
+
+        <div class="score-grid">
+          ${scoreItems.slice(0,4).map(s => `
+            <div class="score-card">
+              <div class="sc-label">${s.label}</div>
+              <div class="sc-num ${scoreClass(data.scores[s.key])}">${data.scores[s.key]}</div>
+              <div class="sc-bar"><div class="sc-fill ${fillClass(data.scores[s.key])}" style="width:${data.scores[s.key]}%"></div></div>
+            </div>`).join('')}
+        </div>
+
+        ${compareSection}
+
+        <div class="result-block">
+          <div class="rb-header"><div class="rb-icon">✓</div><div class="rb-title">What Works</div><div class="rb-count">${data.whatWorks.length} items</div></div>
+          <div class="rb-body">${data.whatWorks.map(w => `<div class="rb-item"><span class="rb-arrow ok">✓</span><span>${w}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="result-block">
+          <div class="rb-header"><div class="rb-icon">✕</div><div class="rb-title">What Hurts the Look</div><div class="rb-count">${data.whatHurts.length} issues</div></div>
+          <div class="rb-body">${data.whatHurts.map(w => `<div class="rb-item"><span class="rb-arrow bad">✕</span><span>${w}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="result-block">
+          <div class="rb-header"><div class="rb-icon">→</div><div class="rb-title">Change These Right Now</div><div class="rb-count">${data.changeNow.length} actions</div></div>
+          <div class="rb-body">${data.changeNow.map(w => `<div class="rb-item"><span class="rb-arrow warn">→</span><span>${w}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="final-rec">
+          <div class="fr-label">◈ Final Recommendation</div>
+          <div class="fr-text">"${data.finalRec}"</div>
+        </div>
+
+        <div class="result-actions">
+          <button class="ra-btn ra-primary" onclick="resetAnalysis()">Analyze Another Look</button>
+          <button class="ra-btn ra-secondary" onclick="scrollToSection('pricing')">Save Results — Upgrade</button>
+        </div>
+      </div>
+    </div>`;
+
+  const container = document.getElementById('results-content');
+  container.innerHTML = html;
+  container.style.display = 'block';
+  document.getElementById('result-empty').style.display = 'none';
+}
+
+/* ── BUY MODE RESULTS ── */
+const BUY_DEMO = {
+  verdict: 'Conditionally worth buying — but only if your wardrobe is missing this type of piece.',
+  verdictLevel: 'average',
+  worthBuying: 'Maybe',
+  versatility: 78,
+  value: 65,
+  whatGood: [
+    'The color is a wardrobe neutral — this will pair with most other items without conflict.',
+    'The silhouette is classic rather than trend-driven, meaning it won\'t look dated in two years.',
+    'Fabric appears to have some structure — not flimsily thin from the photo.',
+  ],
+  whatBad: [
+    'Not versatile enough to carry formal occasions — this stays firmly in smart-casual territory.',
+    'If you already own something similar in this color range, this is a redundant purchase.',
+    'The detailing (if present) trends toward a specific aesthetic that may not age well.',
+  ],
+  verdict_detail: 'If your wardrobe has a gap in this category, this is a reasonable addition. If you already have a similar piece, this is a waste of money. The item itself is solid — the question is whether you actually need it.',
+};
+
+function renderBuyResults(apiData) {
+  const data = apiData || BUY_DEMO;
+  const photoSrc = state.buyPhoto?.dataUrl;
+  const worthColors = { Yes: 'vb-good', Maybe: 'vb-average', No: 'vb-poor' };
+
+  const html = `
+    <div class="results-layout">
+      <div class="results-photo-col">
+        <div class="photo-preview-box">
+          ${photoSrc
+            ? `<img src="${photoSrc}" alt="Item photo"/>`
+            : `<div class="photo-preview-placeholder"><p>No item photo</p></div>`}
+        </div>
+        <div class="photo-meta">Item Assessment</div>
+        <div class="photo-occ">Should I Buy This?</div>
+      </div>
+
+      <div class="results-main">
+        <div class="api-note">
+          <div class="api-note-icon">⚙</div>
+          <p><strong>Demo Mode:</strong> Connect to <code>evaluateItem(imageData)</code> to get real assessment. Structure is API-ready.</p>
+        </div>
+
+        <div class="result-verdict-header">
+          <div class="verdict-label">◈ Item Verdict</div>
+          <div class="verdict-main">${data.verdict}</div>
+          <div class="verdict-badge ${worthColors[data.worthBuying] || 'vb-average'}">
+            ${data.worthBuying === 'Yes' ? '✓ Buy It' : data.worthBuying === 'No' ? '✕ Skip It' : '⚠ Depends'}
+          </div>
+        </div>
+
+        <div class="buy-result-grid">
+          <div class="brc"><div class="brc-label">Worth Buying</div><div class="brc-value ${data.worthBuying === 'Yes' ? 'pos' : data.worthBuying === 'No' ? 'neg' : 'mid'}">${data.worthBuying}</div></div>
+          <div class="brc"><div class="brc-label">Versatility</div><div class="brc-value">${data.versatility}/100</div></div>
+          <div class="brc"><div class="brc-label">Value Score</div><div class="brc-value">${data.value}/100</div></div>
+          <div class="brc"><div class="brc-label">Wardrobe Fit</div><div class="brc-value mid">Conditional</div></div>
+        </div>
+
+        <div class="result-block">
+          <div class="rb-header"><div class="rb-icon">✓</div><div class="rb-title">What's Good About It</div></div>
+          <div class="rb-body">${data.whatGood.map(w => `<div class="rb-item"><span class="rb-arrow ok">✓</span><span>${w}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="result-block">
+          <div class="rb-header"><div class="rb-icon">✕</div><div class="rb-title">What's Bad / Limiting</div></div>
+          <div class="rb-body">${data.whatBad.map(w => `<div class="rb-item"><span class="rb-arrow bad">✕</span><span>${w}</span></div>`).join('')}</div>
+        </div>
+
+        <div class="final-rec">
+          <div class="fr-label">◈ Final Verdict</div>
+          <div class="fr-text">"${data.verdict_detail}"</div>
+        </div>
+
+        <div class="result-actions">
+          <button class="ra-btn ra-primary" onclick="resetAnalysis()">Evaluate Another Item</button>
+          <button class="ra-btn ra-secondary" onclick="scrollToSection('pricing')">Save History — Upgrade</button>
+        </div>
+      </div>
+    </div>`;
+
+  const container = document.getElementById('results-content');
+  container.innerHTML = html;
+  container.style.display = 'block';
+  document.getElementById('result-empty').style.display = 'none';
+}
+
+/* ── RESET ── */
+function resetAnalysis() {
+  state.mainPhoto = null;
+  state.comparePhotos = [null, null];
+  state.buyPhoto = null;
+  state.faceScan = { front: null, left: null, right: null, quarter: null };
+  state.occasion = 'date';
+  state.groupPhoto = false;
+  state.selectedPerson = null;
+  state.analysisComplete = false;
+
+  // Reset uploads
+  ['file-main','file-compare-2','file-compare-3','file-buy'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['uz-main','uz-compare-2','uz-compare-3','uz-buy'].forEach(zId => {
+    const z = document.getElementById(zId);
+    if (!z) return;
+    z.classList.remove('has-file');
+    const ph = z.querySelector('.upload-placeholder'); if (ph) ph.style.display = '';
+    const prev = z.querySelector('.upload-preview'); if (prev) { prev.src = ''; prev.classList.remove('visible'); }
+  });
+  ['face-front','face-left','face-right','face-quarter'].forEach(id => {
+    const s = document.getElementById(id); if (!s) return;
+    s.classList.remove('has-file');
+    const inner = s.querySelector('.face-slot-inner'); if (inner) inner.style.opacity = '';
+    const prev = s.querySelector('.upload-preview'); if (prev) prev.src = '';
+  });
+  document.getElementById('group-toggle').style.display = 'none';
+  document.getElementById('group-toggle').classList.remove('on');
+  document.getElementById('group-selector').classList.remove('visible');
+  document.querySelectorAll('.occ-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('.occ-btn')?.classList.add('selected');
+
+  document.getElementById('results-content').style.display = 'none';
+  document.getElementById('result-empty').style.display = 'block';
+  updateAnalyzeBtn();
+  goStep(0);
+}
+
+/* ── AD MODAL ── */
+let adInterval = null;
+function openAdModal() {
+  document.getElementById('ad-modal').classList.add('on');
+  const timer = document.getElementById('adTimer');
+  const fill = document.getElementById('adProgressFill');
+  const claimBtn = document.getElementById('adClaimBtn');
+  let secs = 5;
+  timer.textContent = secs;
+  fill.style.transition = 'none';
+  fill.style.width = '0';
+  claimBtn.disabled = true;
+  claimBtn.classList.remove('ready');
+  setTimeout(() => {
+    fill.style.transition = `width ${secs}s linear`;
+    fill.style.width = '100%';
+  }, 50);
+  adInterval = setInterval(() => {
+    secs--;
+    timer.textContent = secs > 0 ? secs : '0';
+    if (secs <= 0) {
+      clearInterval(adInterval);
+      claimBtn.disabled = false;
+      claimBtn.classList.add('ready');
+    }
+  }, 1000);
+}
+function closeAdModal() {
+  document.getElementById('ad-modal').classList.remove('on');
+  if (adInterval) clearInterval(adInterval);
+}
+function claimAdReward() {
+  closeAdModal();
+  // Unlock free analysis — in production, validate server-side
+  scrollToSection('app-section');
+  document.getElementById('analyze-note').textContent = '✓ Ad watched — 1 free analysis unlocked';
+  document.getElementById('main-analyze-btn').textContent = 'Run Free Analysis';
+  if (canAnalyze()) document.getElementById('main-analyze-btn').disabled = false;
+  else document.getElementById('analyze-note').textContent = '✓ Free analysis unlocked — upload a photo to begin';
+}
+
+/* ── SCROLL REVEAL ── */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+/* ── INIT ── */
+renderStepNav();
+goStep(0);
+
+/* ══════════════════════════════════════════════
+   API INTEGRATION GUIDE (for developers)
+   
+   To connect real AI vision analysis:
+   
+   1. Image upload endpoint:
+      POST /api/analyze
+      Body: FormData { image, faceScan[], occasion, mode, personPosition }
+      
+   2. Call the analysis:
+      async function callAnalysisAPI(payload) {
+        const res = await fetch('/api/analyze', { method:'POST', body: payload });
+        const data = await res.json();
+        if (data.mode === 'buy') renderBuyResults(data);
+        else renderStyleResults(data);
+      }
+   
+   3. Expected response shape for style check:
+      { verdict, verdictLevel, scores, whatWorks, whatHurts, changeNow, bestOutfit, finalRec }
+   
+   4. Expected response shape for buy mode:
+      { verdict, verdictLevel, worthBuying, versatility, value, whatGood, whatBad, verdict_detail }
+   
+   5. Ad/payment gate:
+      - Free: client tracks ad watched → backend validates token → returns 1 analysis
+      - Paid: JWT bearer token in Authorization header → unlimited
+   
+   Replace the demo data in DEMO_RESULTS and BUY_DEMO with your API call.
+══════════════════════════════════════════════ */
+</script>
+</body>
+</html>
