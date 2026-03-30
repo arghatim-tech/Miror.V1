@@ -56,6 +56,7 @@ type NormalizedPayload = {
   occasion: Occasion;
   groupMode: boolean;
   targetPersonNote: string;
+  followUpAnswer: string;
   selfie: string | null;
   outfitImages: string[];
   itemToBuy: string | null;
@@ -120,6 +121,10 @@ function normalizePayload(payload: AnalyzeRequestBody | null): NormalizedPayload
       typeof payload.targetPersonNote === "string"
         ? payload.targetPersonNote.trim().slice(0, 240)
         : "",
+    followUpAnswer:
+      typeof payload.followUpAnswer === "string"
+        ? payload.followUpAnswer.trim().slice(0, 240)
+        : "",
     selfie,
     outfitImages,
     itemToBuy,
@@ -129,27 +134,31 @@ function normalizePayload(payload: AnalyzeRequestBody | null): NormalizedPayload
 function createGroupTargetResult(occasion: Occasion): AnalysisResult {
   return normalizeAnalysisResult(
     {
-      verdict: "Select yourself before MIROR scores the group photo.",
-      tone: `Group photo mode is enabled, but the target person is still unclear. Add a short note describing which person should be judged for this ${occasion} look, then run the analysis again. MIROR should not guess in a crowd.`,
+      assessment: "A quick clarification is needed before MIROR can score this group look confidently.",
+      rationale: `Group photo mode is enabled, but the target person is still unclear for this ${occasion} look. MIROR should not guess inside a crowded frame.`,
       confidence: 12,
       outfit: 10,
       grooming: 8,
       color: 10,
       occasion: 10,
-      positives: [
-        "The photo reached the analyzer, so the upload flow is working.",
-        "Group mode correctly stopped the app from scoring the wrong person.",
-        "A short target note is enough to unlock a real analysis on the next try.",
+      strongPoints: [
+        "The photo reached the analyzer correctly, so the upload flow is working.",
+        "The app correctly avoided scoring the wrong person in the group.",
       ],
-      negatives: [
+      areasToRefine: [
         "The target person is not identified clearly enough to score fairly.",
-        "Any verdict right now would be a guess, which MIROR should avoid.",
       ],
-      tips: [
+      recommendedImprovements: [
         "Describe where you are standing in the photo or what you are wearing.",
         "If possible, upload a tighter crop or a solo image for better accuracy.",
-        "Run the scan again after adding the target-person note.",
+        "Submit the clarification and MIROR can continue with a proper assessment.",
       ],
+      winningOutfitIndex: 0,
+      winningOutfitLabel: "",
+      winningReason: "",
+      comparisonNotes: [],
+      followUpRequired: true,
+      followUpQuestion: "Who are you in the photo?",
     },
     "look",
   );
@@ -157,25 +166,37 @@ function createGroupTargetResult(occasion: Occasion): AnalysisResult {
 
 function buildPrompt(payload: NormalizedPayload) {
   const commonRules = [
-    "You are MIROR, a strict AI appearance coach.",
+    "You are MIROR, a premium AI appearance coach.",
     "Return only valid JSON that matches the provided schema. No markdown, no code fences, no extra text.",
-    "Be honest and demanding. Do not flatter average looks or mediocre products.",
+    "Be honest, selective, and useful.",
+    "If the styling is genuinely strong, say so clearly.",
+    "Do not invent flaws just to sound strict, and do not invent praise either.",
     "High scores above 85 must be rare and clearly earned.",
     "Average results should stay average. Do not inflate weak styling into excellence.",
-    "Always include exactly 3 positives, exactly 2 negatives, and exactly 3 practical tips.",
-    "Always identify at least 2 weaknesses if they are visible. If image quality limits certainty, say that clearly in tone and negatives.",
+    "Only include areasToRefine when there is a real refinement to mention. Leave it empty if nothing material needs improvement.",
+    "Only ask a follow-up question when a small missing piece of context materially blocks a confident answer.",
+    "If no clarification is needed, set followUpRequired to false and followUpQuestion to an empty string.",
+    "If image quality limits certainty, say that clearly in the rationale and recommendations.",
   ];
 
   if (payload.mode === "look") {
+    const effectiveTargetNote =
+      payload.targetPersonNote || payload.followUpAnswer || "none provided";
+
     return [
       ...commonRules,
       "This is LOOK mode.",
       "Judge outfit strength, color harmony, grooming, occasion fit, and confidence/presentation.",
-      "If multiple outfit option images are included, compare them and identify the best one by number in the verdict or tone.",
-      "If the group photo target is unclear, say the user must select the person and keep scores low instead of guessing.",
+      "If 2 or more outfit option images are included, compare them properly instead of giving generic comparison text.",
+      "Set winningOutfitIndex to the 1-based winning outfit number, set winningOutfitLabel, and explain specifically why it wins in winningReason.",
+      "Use comparisonNotes to explain specifically why the other outfits lose. Mention actual visual differences, not generic filler.",
+      "If there is no real comparison, set winningOutfitIndex to 0, winningOutfitLabel to an empty string, winningReason to an empty string, and comparisonNotes to an empty array.",
+      "If the overall look is genuinely strong, acknowledge that clearly and do not force criticism.",
+      "If the group photo target is still unclear after the provided notes, ask exactly who should be judged instead of guessing.",
       `Occasion: ${payload.occasion}.`,
       `Group photo mode: ${payload.groupMode ? "enabled" : "disabled"}.`,
-      `Target person note: ${payload.targetPersonNote || "none provided"}.`,
+      `Target person note: ${effectiveTargetNote}.`,
+      `Follow-up clarification from user: ${payload.followUpAnswer || "none provided"}.`,
       "Score meaning:",
       "- confidence = confidence / presentation",
       "- outfit = outfit strength",
@@ -189,8 +210,11 @@ function buildPrompt(payload: NormalizedPayload) {
     ...commonRules,
     "This is BUY mode.",
     "Judge the item on visual appeal, versatility, whether it is worth buying, its weaknesses, and whether it deserves a place in a wardrobe.",
+    "If the item is genuinely strong for the intended use, say so directly instead of forcing negative filler.",
     `Primary intended occasion: ${payload.occasion}.`,
+    `Follow-up clarification from user: ${payload.followUpAnswer || "none provided"}.`,
     "Be especially skeptical about whether the item is distinctive, wearable, and justified.",
+    "Set winningOutfitIndex to 0, winningOutfitLabel to an empty string, winningReason to an empty string, and comparisonNotes to an empty array.",
     "Score meaning:",
     "- confidence = visual appeal / purchase confidence",
     "- outfit = wardrobe value / how worth buying it is",
@@ -228,6 +252,12 @@ function buildParts(payload: NormalizedPayload) {
       parts.push({ text: `Outfit option ${index + 1}:` });
       parts.push(imagePart);
     });
+
+    if (payload.outfitImages.length > 1) {
+      parts.push({
+        text: `Comparison mode is active. Rank the ${payload.outfitImages.length} outfit options, choose one winner, and explain the real tradeoffs.`,
+      });
+    }
   }
 
   if (payload.mode === "buy" && payload.itemToBuy) {
@@ -295,7 +325,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (normalizedPayload.mode === "look" && normalizedPayload.groupMode && !normalizedPayload.targetPersonNote) {
+  if (
+    normalizedPayload.mode === "look" &&
+    normalizedPayload.groupMode &&
+    !normalizedPayload.targetPersonNote &&
+    !normalizedPayload.followUpAnswer
+  ) {
     return NextResponse.json(createGroupTargetResult(normalizedPayload.occasion));
   }
 

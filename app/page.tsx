@@ -2,6 +2,7 @@
 
 import { PricingGrid } from "@/components/pricing-grid";
 import {
+  getAreasToRefine,
   type AnalysisResult,
   type AnalyzeRequestBody,
   type Mode,
@@ -29,16 +30,22 @@ function isAnalysisResult(value: unknown): value is AnalysisResult {
   }
 
   return (
-    "verdict" in value &&
-    "tone" in value &&
+    "assessment" in value &&
+    "rationale" in value &&
     "confidence" in value &&
     "outfit" in value &&
     "grooming" in value &&
     "color" in value &&
     "occasion" in value &&
-    "positives" in value &&
-    "negatives" in value &&
-    "tips" in value
+    "strongPoints" in value &&
+    "areasToRefine" in value &&
+    "recommendedImprovements" in value &&
+    "winningOutfitIndex" in value &&
+    "winningOutfitLabel" in value &&
+    "winningReason" in value &&
+    "comparisonNotes" in value &&
+    "followUpRequired" in value &&
+    "followUpQuestion" in value
   );
 }
 
@@ -241,10 +248,28 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [followUpAnswer, setFollowUpAnswer] = useState("");
 
   const isDark = theme === "dark";
+  const uploadedOutfitImages = outfits.filter((item): item is string => Boolean(item));
   const canAnalyze = mode === "look" ? Boolean(selfie) : Boolean(itemToBuy);
   const previewImage = mode === "look" ? selfie : itemToBuy;
+  const winningOutfitImage =
+    mode === "look" && result && result.winningOutfitIndex > 0
+      ? uploadedOutfitImages[result.winningOutfitIndex - 1] ?? null
+      : null;
+  const displayImage = winningOutfitImage ?? previewImage;
+  const comparisonMode = mode === "look" && uploadedOutfitImages.length > 1;
+  const showWinningOutfit =
+    Boolean(result) &&
+    mode === "look" &&
+    comparisonMode &&
+    (result?.winningOutfitIndex ?? 0) > 0 &&
+    Boolean(winningOutfitImage);
+  const showFollowUp =
+    Boolean(result?.followUpRequired && result.followUpQuestion.trim());
+  const canSubmitFollowUp = followUpAnswer.trim().length > 0 && !loading;
+  const visibleAreasToRefine = result ? getAreasToRefine(result, mode) : [];
 
   const pageStyle = {
     fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
@@ -303,6 +328,7 @@ export default function Page() {
   const resetAnalysisFeedback = () => {
     setResult(null);
     setAnalysisError(null);
+    setFollowUpAnswer("");
   };
 
   async function onSingleImage(
@@ -332,22 +358,25 @@ export default function Page() {
     resetAnalysisFeedback();
   }
 
-  async function runAnalysis() {
+  async function runAnalysis(clarification = "") {
     if (!canAnalyze) {
       return;
     }
 
     setLoading(true);
     setAnalysisError(null);
-    setResult(null);
+    if (!clarification) {
+      setResult(null);
+    }
 
     const requestBody: AnalyzeRequestBody = {
       mode,
       occasion,
       groupMode,
       targetPersonNote,
+      followUpAnswer: clarification.trim(),
       selfie,
-      outfitImages: outfits.filter((item): item is string => Boolean(item)),
+      outfitImages: uploadedOutfitImages,
       itemToBuy,
     };
 
@@ -371,6 +400,7 @@ export default function Page() {
       }
 
       setResult(data);
+      setFollowUpAnswer("");
     } catch (error) {
       setAnalysisError(
         error instanceof Error ? error.message : "Unable to analyze the image right now.",
@@ -960,7 +990,7 @@ export default function Page() {
                 <button
                   type="button"
                   disabled={!canAnalyze || loading}
-                  onClick={runAnalysis}
+                  onClick={() => runAnalysis()}
                   className={cx(
                     "mt-6 w-full rounded-sm px-5 py-4 font-semibold uppercase tracking-[0.12em] disabled:cursor-not-allowed disabled:opacity-50",
                     accentButtonClass,
@@ -990,14 +1020,20 @@ export default function Page() {
 
             <div className={cx(panelClass, "rounded-[1.5rem] p-6")}>
               <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>Results</div>
-              <h2 className={cx(headingClass, "mt-3 text-4xl")}>Real image verdict, same MIROR layout.</h2>
+              <h2 className={cx(headingClass, "mt-3 text-4xl")}>Professional analysis, same MIROR layout.</h2>
 
               <div className="mt-8 grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
                 <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
-                  {previewImage ? (
+                  {displayImage ? (
                     <img
-                      src={previewImage}
-                      alt={mode === "look" ? "Result preview" : "Item preview"}
+                      src={displayImage}
+                      alt={
+                        showWinningOutfit
+                          ? `${result?.winningOutfitLabel ?? "Winning outfit"} preview`
+                          : mode === "look"
+                            ? "Result preview"
+                            : "Item preview"
+                      }
                       className="h-[420px] w-full rounded-2xl object-cover"
                     />
                   ) : (
@@ -1005,6 +1041,18 @@ export default function Page() {
                       {mode === "look" ? "Upload an image first" : "Upload an item first"}
                     </div>
                   )}
+
+                  {showWinningOutfit ? (
+                    <div className={cx("mt-4 rounded-xl border px-4 py-3 text-sm", isDark ? "border-[#4b3d2e] bg-[#120f0b]" : "border-[#e2d6c3] bg-[#fffaf1]")}>
+                      <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
+                        Winning outfit
+                      </div>
+                      <div className={cx("mt-2 font-semibold", primaryTextClass)}>
+                        {result?.winningOutfitLabel}
+                      </div>
+                      <p className={cx("mt-2", mutedClass)}>{result?.winningReason}</p>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div aria-live="polite">
@@ -1017,10 +1065,11 @@ export default function Page() {
                         What MIROR returns every single time
                       </div>
                       <ul className={cx("mt-6 space-y-3 text-base", mutedClass)}>
-                        <li>- Overall verdict</li>
-                        <li>- What works</li>
-                        <li>- What hurts</li>
-                        <li>- What to change now</li>
+                        <li>- Overall assessment</li>
+                        <li>- Winning outfit when comparison is active</li>
+                        <li>- Strong points</li>
+                        <li>- Areas to refine</li>
+                        <li>- Recommended improvements</li>
                         <li>- Scores that are not ridiculously generous</li>
                         <li>- Best outfit or buy/skip decision</li>
                       </ul>
@@ -1029,13 +1078,37 @@ export default function Page() {
                     <div>
                       <div className={cx(softPanelClass, "p-5")}>
                         <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
-                          Final verdict
+                          Overall assessment
                         </div>
                         <h3 className={cx(headingClass, "mt-3 text-4xl leading-tight")}>
-                          {result.verdict}
+                          {result.assessment}
                         </h3>
-                        <p className={cx("mt-3", mutedClass)}>{result.tone}</p>
+                        <p className={cx("mt-3", mutedClass)}>{result.rationale}</p>
                       </div>
+
+                      {showWinningOutfit ? (
+                        <div className={cx("mt-4 rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                          <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
+                            Winning outfit
+                          </div>
+                          <div className={cx("mt-2 text-xl font-semibold", primaryTextClass)}>
+                            {result.winningOutfitLabel}
+                          </div>
+                          <p className={cx("mt-2 text-sm leading-7", mutedClass)}>
+                            {result.winningReason}
+                          </p>
+                          {result.comparisonNotes.length > 0 ? (
+                            <ul className={cx("mt-4 space-y-2 text-sm", mutedClass)}>
+                              {result.comparisonNotes.map((item) => (
+                                <li key={item} className="flex gap-3">
+                                  <span className={accentTextClass}>+</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ) : null}
 
                       <div className="mt-6 space-y-4">
                         <Score
@@ -1062,10 +1135,10 @@ export default function Page() {
                       <div className="mt-8 grid gap-4 md:grid-cols-2">
                         <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-500">
-                            What works
+                            Strong points
                           </div>
                           <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
-                            {result.positives.map((item) => (
+                            {result.strongPoints.map((item) => (
                               <li key={item} className="flex gap-3">
                                 <span className="text-emerald-500">+</span>
                                 <span>{item}</span>
@@ -1076,10 +1149,10 @@ export default function Page() {
 
                         <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-red-500">
-                            What hurts
+                            Areas to refine
                           </div>
                           <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
-                            {result.negatives.map((item) => (
+                            {visibleAreasToRefine.map((item) => (
                               <li key={item} className="flex gap-3">
                                 <span className="text-red-500">-</span>
                                 <span>{item}</span>
@@ -1096,10 +1169,10 @@ export default function Page() {
                         )}
                       >
                         <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
-                          Changes to make now
+                          Recommended improvements
                         </div>
                         <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
-                          {result.tips.map((item) => (
+                          {result.recommendedImprovements.map((item) => (
                             <li key={item} className="flex gap-3">
                               <span className={accentTextClass}>&gt;</span>
                               <span>{item}</span>
@@ -1107,6 +1180,42 @@ export default function Page() {
                           ))}
                         </ul>
                       </div>
+
+                      {showFollowUp ? (
+                        <div className={cx("mt-4 rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                          <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
+                            Clarification needed
+                          </div>
+                          <p className={cx("mt-3 text-sm leading-7", mutedClass)}>
+                            {result.followUpQuestion}
+                          </p>
+                          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                            <input
+                              type="text"
+                              value={followUpAnswer}
+                              onChange={(event) => setFollowUpAnswer(event.target.value)}
+                              placeholder="Add a short answer"
+                              className={cx(
+                                "min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                                isDark
+                                  ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                                  : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                              )}
+                            />
+                            <button
+                              type="button"
+                              disabled={!canSubmitFollowUp}
+                              onClick={() => runAnalysis(followUpAnswer)}
+                              className={cx(
+                                "rounded-sm px-5 py-3 text-sm font-semibold uppercase tracking-[0.12em] disabled:cursor-not-allowed disabled:opacity-50",
+                                accentButtonClass,
+                              )}
+                            >
+                              Submit
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>
