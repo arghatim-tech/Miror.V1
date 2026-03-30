@@ -1,6 +1,12 @@
 ﻿"use client";
 
 import { PricingGrid } from "@/components/pricing-grid";
+import {
+  type AnalysisResult,
+  type AnalyzeRequestBody,
+  type Mode,
+  type Occasion,
+} from "@/lib/analysis";
 import { Playfair_Display } from "next/font/google";
 import { type ChangeEvent, useState } from "react";
 
@@ -12,33 +18,87 @@ const playfair = Playfair_Display({
 
 type Theme = "dark" | "light";
 type PageState = "home" | "pricing";
-type Mode = "look" | "buy";
-type Occasion = "date" | "party" | "work" | "wedding" | "casual";
-
-type AnalysisResult = {
-  verdict: string;
-  tone: string;
-  confidence: number;
-  outfit: number;
-  grooming: number;
-  color: number;
-  occasion: number;
-  tips: string[];
-  positives: string[];
-  negatives: string[];
-};
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
+function isAnalysisResult(value: unknown): value is AnalysisResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  return (
+    "verdict" in value &&
+    "tone" in value &&
+    "confidence" in value &&
+    "outfit" in value &&
+    "grooming" in value &&
+    "color" in value &&
+    "occasion" in value &&
+    "positives" in value &&
+    "negatives" in value &&
+    "tips" in value
+  );
+}
+
+function readOriginalFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = url;
+  });
+}
+
+async function readFileAsDataUrl(file: File): Promise<string> {
+  if (typeof window === "undefined" || !file.type.startsWith("image/")) {
+    return readOriginalFileAsDataUrl(file);
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const maxDimension = 1400;
+    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = longestSide > maxDimension ? maxDimension / longestSide : 1;
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Canvas is unavailable.");
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const outputType = file.type === "image/png" ? "image/png" : "image/jpeg";
+
+    if (outputType === "image/jpeg") {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    return canvas.toDataURL(outputType, outputType === "image/png" ? undefined : 0.84);
+  } catch {
+    return readOriginalFileAsDataUrl(file);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 const occasionLabels: Record<Occasion, string> = {
@@ -120,76 +180,6 @@ const featureCards = [
   },
 ] as const;
 
-function mockAnalyze(
-  mode: Mode,
-  occasion: Occasion,
-  groupMode: boolean,
-  outfitCount: number,
-): AnalysisResult {
-  const base = {
-    date: { confidence: 78, outfit: 73, grooming: 82, color: 70, occasion: 76 },
-    party: { confidence: 83, outfit: 75, grooming: 79, color: 74, occasion: 80 },
-    work: { confidence: 74, outfit: 77, grooming: 80, color: 72, occasion: 84 },
-    wedding: { confidence: 81, outfit: 79, grooming: 84, color: 76, occasion: 82 },
-    casual: { confidence: 76, outfit: 71, grooming: 75, color: 73, occasion: 78 },
-  }[occasion];
-
-  if (mode === "buy") {
-    return {
-      verdict: "Worth buying, but only if it earns a real place in your wardrobe.",
-      tone: "The item has visual value, but it still needs to justify the purchase.",
-      confidence: 80,
-      outfit: 82,
-      grooming: 0,
-      color: 76,
-      occasion: 74,
-      positives: [
-        "The item has enough structure to look intentional instead of forgettable.",
-        "The color looks wearable and easy to combine with neutrals.",
-        "It can move across more than one setting, which makes it easier to justify.",
-      ],
-      negatives: [
-        "It is not unique enough to justify the spend if you already own something close.",
-        "Fit and fabric quality will decide whether this becomes a smart buy or dead weight.",
-      ],
-      tips: [
-        "Buy it if it fills a wardrobe gap, not because the product photo seduced you.",
-        "If you cannot style it with at least 3 outfits, skip it.",
-        "Check fabric, shoulder line, and length before spending.",
-      ],
-    };
-  }
-
-  return {
-    verdict:
-      outfitCount > 1
-        ? "Best outfit selected. Strong enough to wear, still room to sharpen it."
-        : "Good base. One or two changes would upgrade the whole look.",
-    tone: groupMode
-      ? "Group-photo mode should eventually force the user to identify themselves before scoring."
-      : "The result should feel honest and useful, not flattering for no reason.",
-    confidence: base.confidence,
-    outfit: base.outfit + Math.min(outfitCount, 2),
-    grooming: base.grooming,
-    color: base.color,
-    occasion: base.occasion,
-    positives: [
-      "Grooming reads clean enough to support the overall look.",
-      "The silhouette is coherent and not chaotic.",
-      "The outfit can work for the selected occasion without embarrassing you.",
-    ],
-    negatives: [
-      "The outfit is decent but still a little safe and underpowered.",
-      "Color harmony is acceptable, not sharp. It needs one cleaner choice.",
-    ],
-    tips: [
-      "Use one stronger anchor piece instead of letting the whole outfit stay politely average.",
-      "Keep colors tighter near the face. Cleaner contrast usually wins.",
-      "The backend prompt should judge harder and ban empty praise.",
-    ],
-  };
-}
-
 function BackgroundDecor({ isDark }: { isDark: boolean }) {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -228,7 +218,7 @@ function Score({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
-        <span className={isDark ? "text-[#c7b9a6]" : "text-[#6f6658]"}>{label}</span>
+        <span className={isDark ? "text-[#d4c6b3]" : "text-[#6f6658]"}>{label}</span>
         <span className={isDark ? "text-[#d2ab55]" : "text-amber-800"}>{value}</span>
       </div>
       <div className={cx("h-1.5 rounded-full", isDark ? "bg-[#2f271e]" : "bg-[#dfd5c3]")}>
@@ -244,14 +234,15 @@ export default function Page() {
   const [mode, setMode] = useState<Mode>("look");
   const [occasion, setOccasion] = useState<Occasion>("date");
   const [groupMode, setGroupMode] = useState(false);
+  const [targetPersonNote, setTargetPersonNote] = useState("");
   const [selfie, setSelfie] = useState<string | null>(null);
   const [outfits, setOutfits] = useState<Array<string | null>>([null, null, null]);
   const [itemToBuy, setItemToBuy] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const isDark = theme === "dark";
-  const uploadedOutfitCount = outfits.filter(Boolean).length;
   const canAnalyze = mode === "look" ? Boolean(selfie) : Boolean(itemToBuy);
   const previewImage = mode === "look" ? selfie : itemToBuy;
 
@@ -261,7 +252,7 @@ export default function Page() {
 
   const wrapClass = cx(
     "relative min-h-screen overflow-x-hidden transition-colors duration-300",
-    isDark ? "bg-[#090806] text-[#f5efe4]" : "bg-[#fcfaf5] text-[#17130e]",
+    isDark ? "bg-[#090806] text-[#fff6eb]" : "bg-[#fcfaf5] text-[#17130e]",
   );
   const panelClass = cx(
     "border transition-colors duration-300",
@@ -279,10 +270,11 @@ export default function Page() {
       ? "border border-[#d2ab55] bg-[#d2ab55] text-[#1a140b] hover:border-[#e1bf68] hover:bg-[#e1bf68]"
       : "border border-amber-800 bg-amber-800 text-white hover:border-amber-900 hover:bg-amber-900",
   );
-  const mutedClass = isDark ? "text-[#b3a693]" : "text-[#6f6658]";
-  const subduedClass = isDark ? "text-[#8e816f]" : "text-[#8f8372]";
+  const primaryTextClass = isDark ? "text-[#fff6eb]" : "text-[#17130e]";
+  const mutedClass = isDark ? "text-[#cabdab]" : "text-[#6f6658]";
+  const subduedClass = isDark ? "text-[#a89985]" : "text-[#8f8372]";
   const secondaryButtonClass = isDark
-    ? "border-[#43372a] text-[#b3a693] hover:border-[#6a5842] hover:bg-[#1a1510] hover:text-[#f5efe4]"
+    ? "border-[#43372a] text-[#cabdab] hover:border-[#6a5842] hover:bg-[#1a1510] hover:text-[#fff6eb]"
     : "border-[#d7ccb7] text-[#6f6658] hover:border-amber-700/40 hover:text-amber-900";
   const sectionDividerClass = isDark ? "bg-[#2b241b]" : "bg-[#ddd3c1]";
   const sectionSurfaceClass = isDark ? "bg-[#0f0c09]" : "bg-[#f7f1e8]";
@@ -308,6 +300,11 @@ export default function Page() {
     setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
   };
 
+  const resetAnalysisFeedback = () => {
+    setResult(null);
+    setAnalysisError(null);
+  };
+
   async function onSingleImage(
     event: ChangeEvent<HTMLInputElement>,
     setter: (value: string | null) => void,
@@ -319,7 +316,7 @@ export default function Page() {
 
     const dataUrl = await readFileAsDataUrl(file);
     setter(dataUrl);
-    setResult(null);
+    resetAnalysisFeedback();
   }
 
   async function onOutfitImage(event: ChangeEvent<HTMLInputElement>, index: number) {
@@ -332,21 +329,55 @@ export default function Page() {
     setOutfits((currentOutfits) =>
       currentOutfits.map((item, itemIndex) => (itemIndex === index ? dataUrl : item)),
     );
-    setResult(null);
+    resetAnalysisFeedback();
   }
 
-  async function runMockAnalysis() {
+  async function runAnalysis() {
     if (!canAnalyze) {
       return;
     }
 
     setLoading(true);
+    setAnalysisError(null);
     setResult(null);
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 1200);
-    });
-    setResult(mockAnalyze(mode, occasion, groupMode, uploadedOutfitCount));
-    setLoading(false);
+
+    const requestBody: AnalyzeRequestBody = {
+      mode,
+      occasion,
+      groupMode,
+      targetPersonNote,
+      selfie,
+      outfitImages: outfits.filter((item): item is string => Boolean(item)),
+      itemToBuy,
+    };
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | AnalysisResult
+        | { error?: string }
+        | null;
+
+      if (!response.ok || !data || ("error" in data && data.error) || !isAnalysisResult(data)) {
+        throw new Error(
+          data && "error" in data ? data.error || "Unable to analyze the image right now." : "Unable to analyze the image right now.",
+        );
+      }
+
+      setResult(data);
+    } catch (error) {
+      setAnalysisError(
+        error instanceof Error ? error.message : "Unable to analyze the image right now.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (page === "pricing") {
@@ -420,9 +451,9 @@ export default function Page() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
           <div className={logoClass}>
-            <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+            <span className={primaryTextClass}>MIR</span>
             <span className={accentTextClass}>O</span>
-            <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
+            <span className={primaryTextClass}>R</span>
           </div>
 
           <nav className="hidden items-center gap-10 md:flex">
@@ -518,12 +549,12 @@ export default function Page() {
                     )}
                   >
                     <div className={cx(playfair.className, "text-sm uppercase tracking-[0.22em]")}>
-                      <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+                      <span className={primaryTextClass}>MIR</span>
                       <span className={accentTextClass}>O</span>
-                      <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
+                      <span className={primaryTextClass}>R</span>
                     </div>
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                      Date mode
+                      {mode === "buy" ? "Buy mode" : `${occasionLabels[occasion]} mode`}
                     </div>
                   </div>
 
@@ -536,7 +567,7 @@ export default function Page() {
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
                       Upload preview
                     </div>
-                    <div className={cx("mt-3 text-base font-semibold", isDark ? "text-[#f5efe4]" : "text-[#17130e]")}>
+                    <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
                       Selfie or full look
                     </div>
                     <div className={cx("mt-2 text-sm", mutedClass)}>
@@ -553,7 +584,7 @@ export default function Page() {
                           index === 0
                             ? accentButtonClass
                             : isDark
-                              ? "bg-[#1b1713] text-[#b3a693]"
+                              ? "bg-[#1b1713] text-[#cabdab]"
                               : "bg-[#eee5d8] text-[#6f6658]",
                         )}
                       >
@@ -729,9 +760,9 @@ export default function Page() {
                 )}
               >
                 <div className={cx(playfair.className, "text-sm uppercase tracking-[0.22em]")}>
-                  <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>MIR</span>
+                  <span className={primaryTextClass}>MIR</span>
                   <span className={accentTextClass}>O</span>
-                  <span className={isDark ? "text-[#f5efe4]" : "text-[#17130e]"}>R</span>
+                  <span className={primaryTextClass}>R</span>
                 </div>
                 <div className={mutedClass}>Demo</div>
               </div>
@@ -742,7 +773,7 @@ export default function Page() {
                     type="button"
                     onClick={() => {
                       setMode("look");
-                      setResult(null);
+                      resetAnalysisFeedback();
                     }}
                     className={pillClass(mode === "look")}
                   >
@@ -752,7 +783,7 @@ export default function Page() {
                     type="button"
                     onClick={() => {
                       setMode("buy");
-                      setResult(null);
+                      resetAnalysisFeedback();
                     }}
                     className={pillClass(mode === "buy")}
                   >
@@ -780,9 +811,11 @@ export default function Page() {
                           <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
                             Primary image
                           </div>
-                          <div className="mt-3 text-base font-semibold">Upload selfie or full look</div>
+                          <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
+                            Upload selfie or full look
+                          </div>
                           <div className={cx("mt-2 text-sm", mutedClass)}>
-                            Real upload preview here. Backend AI scan comes next.
+                            Real upload preview here. Gemini reads the image after you submit it.
                           </div>
                         </>
                       )}
@@ -793,14 +826,14 @@ export default function Page() {
                         <div>
                           <div className={cx("font-semibold", accentTextClass)}>Group photo mode</div>
                           <div className={cx("mt-1 text-sm", mutedClass)}>
-                            Later backend work should let the user tap themselves before scoring.
+                            Add a short note so MIROR knows exactly which person to judge.
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
                             setGroupMode((currentValue) => !currentValue);
-                            setResult(null);
+                            resetAnalysisFeedback();
                           }}
                           className={cx(
                             "rounded-sm px-4 py-2 text-sm",
@@ -812,25 +845,28 @@ export default function Page() {
                           {groupMode ? "Enabled" : "Enable"}
                         </button>
                       </div>
-                    </div>
 
-                    <div>
-                      <div className={cx("mb-3 text-sm", mutedClass)}>Occasion</div>
-                      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                        {(Object.keys(occasionLabels) as Occasion[]).map((key) => (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => {
-                              setOccasion(key);
-                              setResult(null);
+                      {groupMode ? (
+                        <div className="mt-4">
+                          <div className={cx("mb-2 text-sm", mutedClass)}>Who are you in the photo?</div>
+                          <textarea
+                            value={targetPersonNote}
+                            onChange={(event) => {
+                              setTargetPersonNote(event.target.value);
+                              resetAnalysisFeedback();
                             }}
-                            className={squareButtonClass(occasion === key)}
-                          >
-                            {occasionLabels[key]}
-                          </button>
-                        ))}
-                      </div>
+                            rows={3}
+                            maxLength={240}
+                            placeholder="Example: I am the person in the middle wearing the black jacket."
+                            className={cx(
+                              "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors placeholder:transition-colors",
+                              isDark
+                                ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                                : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                            )}
+                          />
+                        </div>
+                      ) : null}
                     </div>
 
                     <div>
@@ -888,9 +924,11 @@ export default function Page() {
                           <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
                             Product image
                           </div>
-                          <div className="mt-3 text-base font-semibold">Upload clothing item</div>
+                          <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
+                            Upload clothing item
+                          </div>
                           <div className={cx("mt-2 text-sm", mutedClass)}>
-                            Judge whether the piece deserves money or belongs back on the rack.
+                            MIROR checks visual appeal, versatility, and whether it deserves the money.
                           </div>
                         </>
                       )}
@@ -898,23 +936,61 @@ export default function Page() {
                   </div>
                 )}
 
+                <div className="mt-6">
+                  <div className={cx("mb-3 text-sm", mutedClass)}>
+                    {mode === "buy" ? "Intended occasion" : "Occasion"}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                    {(Object.keys(occasionLabels) as Occasion[]).map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setOccasion(key);
+                          resetAnalysisFeedback();
+                        }}
+                        className={squareButtonClass(occasion === key)}
+                      >
+                        {occasionLabels[key]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   disabled={!canAnalyze || loading}
-                  onClick={runMockAnalysis}
+                  onClick={runAnalysis}
                   className={cx(
                     "mt-6 w-full rounded-sm px-5 py-4 font-semibold uppercase tracking-[0.12em] disabled:cursor-not-allowed disabled:opacity-50",
                     accentButtonClass,
                   )}
                 >
-                  {loading ? "Analyzing..." : mode === "look" ? "Analyze my look" : "Analyze this item"}
+                  {loading
+                    ? "Analyzing..."
+                    : mode === "look"
+                      ? "Analyze my look"
+                      : "Analyze this item"}
                 </button>
+
+                {analysisError ? (
+                  <div
+                    className={cx(
+                      "mt-4 rounded-xl border px-4 py-3 text-sm",
+                      isDark
+                        ? "border-red-400/30 bg-red-400/10 text-red-200"
+                        : "border-red-200 bg-red-50 text-red-700",
+                    )}
+                  >
+                    {analysisError}
+                  </div>
+                ) : null}
               </div>
             </div>
 
             <div className={cx(panelClass, "rounded-[1.5rem] p-6")}>
               <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>Results</div>
-              <h2 className={cx(headingClass, "mt-3 text-4xl")}>Image shown next to the verdict.</h2>
+              <h2 className={cx(headingClass, "mt-3 text-4xl")}>Real image verdict, same MIROR layout.</h2>
 
               <div className="mt-8 grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
                 <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
@@ -935,10 +1011,10 @@ export default function Page() {
                   {!result ? (
                     <div className="flex min-h-[420px] flex-col justify-center">
                       <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
-                        Expected structure
+                        Structured output
                       </div>
                       <div className={cx(headingClass, "mt-4 text-3xl")}>
-                        What the AI should return every single time
+                        What MIROR returns every single time
                       </div>
                       <ul className={cx("mt-6 space-y-3 text-base", mutedClass)}>
                         <li>- Overall verdict</li>
@@ -962,10 +1038,14 @@ export default function Page() {
                       </div>
 
                       <div className="mt-6 space-y-4">
-                        <Score isDark={isDark} label="Confidence / Presence" value={result.confidence} />
                         <Score
                           isDark={isDark}
-                          label={mode === "buy" ? "Style value" : "Outfit strength"}
+                          label={mode === "buy" ? "Visual appeal" : "Confidence / Presence"}
+                          value={result.confidence}
+                        />
+                        <Score
+                          isDark={isDark}
+                          label={mode === "buy" ? "Worth buying" : "Outfit strength"}
                           value={result.outfit}
                         />
                         {mode === "look" ? (

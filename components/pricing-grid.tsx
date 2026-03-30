@@ -32,7 +32,7 @@ export function PricingGrid({
       ? "border border-[#d2ab55] bg-[#d2ab55] text-[#1a140b] hover:border-[#e1bf68] hover:bg-[#e1bf68]"
       : "border border-amber-800 bg-amber-800 text-white hover:border-amber-900 hover:bg-amber-900",
   );
-  const mutedClass = isDark ? "text-[#b3a693]" : "text-[#6f6658]";
+  const mutedClass = isDark ? "text-[#cabdab]" : "text-[#6f6658]";
   const panelClass = cx(
     "border p-8 transition-colors duration-300",
     isDark ? "border-[#3a3025] bg-[#13100d]" : "border-[#ddd3c1] bg-[#fffdf8]",

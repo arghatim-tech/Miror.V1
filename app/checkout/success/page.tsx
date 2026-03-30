@@ -13,7 +13,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 export default function CheckoutSuccessPage() {
   return (
-    <main className="min-h-screen bg-[#090806] px-6 py-16 text-[#f5efe4]">
+    <main className="min-h-screen bg-[#090806] px-6 py-16 text-[#fff6eb]">
       <div className="mx-auto max-w-3xl border border-[#3a3025] bg-[#13100d] p-8 md:p-12">
         <div className="text-[11px] uppercase tracking-[0.22em] text-emerald-400">
           Checkout complete
@@ -21,7 +21,7 @@ export default function CheckoutSuccessPage() {
         <h1 className={cx(playfair.className, "mt-4 text-4xl md:text-5xl")}>
           Stripe says you are in.
         </h1>
-        <p className="mt-4 text-lg leading-8 text-[#b3a693]">
+        <p className="mt-4 text-lg leading-8 text-[#cabdab]">
           The subscription purchase completed successfully. The next backend step
           is wiring Stripe webhooks to unlock paid features automatically inside
           MIROR.

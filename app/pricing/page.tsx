@@ -14,7 +14,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 export default function PricingPage() {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#090806] text-[#f5efe4]">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#090806] text-[#fff6eb]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -28,7 +28,7 @@ export default function PricingPage() {
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="text-sm text-[#b3a693] transition-colors hover:text-[#f5efe4]"
+            className="text-sm text-[#cabdab] transition-colors hover:text-[#fff6eb]"
           >
             Back to home
           </Link>
@@ -44,7 +44,7 @@ export default function PricingPage() {
           <h1 className={cx(playfair.className, "mt-6 text-5xl md:text-6xl")}>
             Start simple. Let Stripe handle the billing.
           </h1>
-          <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-[#b3a693]">
+          <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-[#cabdab]">
             Coach and Pro now open a hosted Stripe Checkout session. No custom
             billing UI yet, just the fastest clean path to paid subscriptions.
           </p>
@@ -60,7 +60,7 @@ export default function PricingPage() {
             <h2 className={cx(playfair.className, "mt-3 text-3xl")}>
               Payment is real. Access automation is next.
             </h2>
-            <p className="mt-3 text-[#b3a693]">
+            <p className="mt-3 text-[#cabdab]">
               This launch keeps billing deliberately simple: Stripe hosts the
               payment page, and the app can add webhooks, auth, and paid-feature
               unlocking in the next backend phase.
@@ -74,7 +74,7 @@ export default function PricingPage() {
             <h2 className={cx(playfair.className, "mt-3 text-3xl")}>
               Ready for Vercel with env vars.
             </h2>
-            <p className="mt-3 text-[#b3a693]">
+            <p className="mt-3 text-[#cabdab]">
               Add the Stripe secret key plus both recurring price IDs in Vercel,
               redeploy, and the checkout buttons will start redirecting to hosted
               Checkout immediately.
