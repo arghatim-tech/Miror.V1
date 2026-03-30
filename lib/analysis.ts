@@ -1,5 +1,27 @@
-export type Occasion = "date" | "party" | "work" | "wedding" | "casual";
+import type { Language } from "@/lib/i18n";
+
+export type Occasion =
+  | "date"
+  | "party"
+  | "work"
+  | "wedding"
+  | "casual"
+  | "custom";
 export type Mode = "look" | "buy";
+export type WardrobeCategory =
+  | "tops"
+  | "pants"
+  | "shoes"
+  | "jackets"
+  | "accessories"
+  | "other";
+
+export type WardrobeItemInput = {
+  id: string;
+  image: string;
+  label: string;
+  category: WardrobeCategory;
+};
 
 export type AnalysisResult = {
   assessment: string;
@@ -9,6 +31,7 @@ export type AnalysisResult = {
   grooming: number;
   color: number;
   occasion: number;
+  occasionLabel: string;
   strongPoints: string[];
   areasToRefine: string[];
   recommendedImprovements: string[];
@@ -16,19 +39,23 @@ export type AnalysisResult = {
   winningOutfitLabel: string;
   winningReason: string;
   comparisonNotes: string[];
+  wardrobeSuggestions: string[];
   followUpRequired: boolean;
   followUpQuestion: string;
 };
 
 export type AnalyzeRequestBody = {
+  language: Language;
   mode: Mode;
   occasion: Occasion;
+  customOccasion: string;
   groupMode: boolean;
   targetPersonNote: string;
   followUpAnswer: string;
   selfie: string | null;
   outfitImages: string[];
   itemToBuy: string | null;
+  wardrobeItems: WardrobeItemInput[];
 };
 
 export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
@@ -38,39 +65,39 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
     assessment: {
       type: "string",
       description:
-        "A concise overall assessment written in premium, professional language.",
+        "A concise overall assessment written in modern, premium, professional language.",
     },
     rationale: {
       type: "string",
       description:
-        "A brief explanation that is honest, specific, and useful. Acknowledge genuinely strong styling clearly when deserved.",
+        "A brief explanation that is honest, image-aware, and specific. Acknowledge genuinely strong styling clearly when deserved.",
     },
     confidence: {
       type: "integer",
       minimum: 0,
       maximum: 100,
       description:
-        "For look mode: confidence/presentation score. For buy mode: visual appeal / purchase confidence score.",
+        "For look mode: confidence / presentation. For buy mode: visual appeal / purchase confidence.",
     },
     outfit: {
       type: "integer",
       minimum: 0,
       maximum: 100,
       description:
-        "For look mode: outfit strength score. For buy mode: overall purchase value / whether it is worth buying.",
+        "For look mode: outfit strength. For buy mode: overall purchase value / how worth buying it is.",
     },
     grooming: {
       type: "integer",
       minimum: 0,
       maximum: 100,
       description:
-        "For look mode: grooming quality. For buy mode: use 0 unless grooming is genuinely relevant in the image.",
+        "For look mode: grooming quality. For buy mode: use 0 unless grooming is truly relevant.",
     },
     color: {
       type: "integer",
       minimum: 0,
       maximum: 100,
-      description: "Color harmony and visual wearability.",
+      description: "Color harmony and overall visual wearability.",
     },
     occasion: {
       type: "integer",
@@ -79,13 +106,16 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
       description:
         "For look mode: occasion fit. For buy mode: versatility and wardrobe usefulness.",
     },
+    occasionLabel: {
+      type: "string",
+      description:
+        "The effective occasion label used in the analysis, including a custom occasion when supplied.",
+    },
     strongPoints: {
       type: "array",
       minItems: 2,
       maxItems: 4,
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
       description:
         "Specific strengths. If the styling is genuinely strong, say that clearly instead of inventing flaws.",
     },
@@ -93,58 +123,60 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
       type: "array",
       minItems: 0,
       maxItems: 3,
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
       description:
-        "Specific refinement points only when real improvement is needed. Leave empty instead of forcing criticism.",
+        "Specific refinement points only when improvement is genuinely needed. Leave empty rather than forcing criticism.",
     },
     recommendedImprovements: {
       type: "array",
       minItems: 1,
       maxItems: 4,
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
       description:
-        "Practical recommendations. If the look is already strong, these can focus on maintaining or slightly polishing it.",
+        "Practical next steps. If the look is already strong, focus on maintaining or subtly sharpening it.",
     },
     winningOutfitIndex: {
       type: "integer",
       minimum: 0,
       maximum: 3,
       description:
-        "Use the 1-based winning outfit number when comparing multiple outfit options. Use 0 when not in comparison mode.",
+        "Use the 1-based winning outfit number when comparing outfit options. Use 0 when no comparison winner applies.",
     },
     winningOutfitLabel: {
       type: "string",
       description:
-        "Use a human-friendly label such as 'Outfit 2' when there is a comparison winner, otherwise an empty string.",
+        "Use a human-friendly label such as 'Outfit 2' when comparison is active. Otherwise use an empty string.",
     },
     winningReason: {
       type: "string",
       description:
-        "A concise explanation of why the winning outfit wins. Empty string when no comparison winner applies.",
+        "A concise explanation of why the winning outfit wins. Empty string when there is no comparison winner.",
     },
     comparisonNotes: {
       type: "array",
       minItems: 0,
       maxItems: 4,
-      items: {
-        type: "string",
-      },
+      items: { type: "string" },
       description:
-        "Specific comparison notes that explain why the winning outfit wins and why the others lose. Empty when no comparison is needed.",
+        "Specific reasons the other outfits lose. Avoid generic filler. Empty when no comparison is needed.",
+    },
+    wardrobeSuggestions: {
+      type: "array",
+      minItems: 0,
+      maxItems: 4,
+      items: { type: "string" },
+      description:
+        "Suggested wardrobe combinations or pairing ideas based on uploaded wardrobe items and occasion.",
     },
     followUpRequired: {
       type: "boolean",
       description:
-        "Set to true only when a small missing piece of context materially blocks a confident answer.",
+        "Set to true only when one small missing detail materially blocks a confident answer.",
     },
     followUpQuestion: {
       type: "string",
       description:
-        "A single controlled follow-up question. Use an empty string when no clarification is needed.",
+        "A single controlled follow-up question. Empty when no clarification is needed.",
     },
   },
   required: [
@@ -155,6 +187,7 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
     "grooming",
     "color",
     "occasion",
+    "occasionLabel",
     "strongPoints",
     "areasToRefine",
     "recommendedImprovements",
@@ -162,6 +195,7 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
     "winningOutfitLabel",
     "winningReason",
     "comparisonNotes",
+    "wardrobeSuggestions",
     "followUpRequired",
     "followUpQuestion",
   ],
@@ -169,20 +203,20 @@ export const ANALYSIS_RESPONSE_JSON_SCHEMA = {
 
 const DEFAULT_STRONG_POINTS: Record<Mode, string[]> = {
   look: [
-    "There is enough visible information to judge the outfit with reasonable confidence.",
-    "The look shows at least one clear styling strength instead of reading completely random.",
-    "The presentation has a usable foundation, even if the finish is not fully optimized.",
+    "The image provides enough visual information for a grounded assessment.",
+    "There is a clear styling direction rather than visual noise.",
+    "The presentation has at least one credible strength to build on.",
   ],
   buy: [
     "The item is visible clearly enough to judge shape, color, and overall appeal.",
-    "The piece can be evaluated against real wardrobe use instead of only product-page hype.",
+    "The piece can be judged against real wardrobe use instead of product-page hype.",
     "There is at least one credible way this item could fit into a wardrobe.",
   ],
 };
 
 const DEFAULT_AREAS_TO_REFINE: Record<Mode, string[]> = {
   look: [
-    "No major weaknesses were obvious enough to justify forcing a negative point here.",
+    "No major weakness was visible enough to justify forcing a negative point here.",
   ],
   buy: [
     "No major weakness was obvious enough to justify forcing a negative point here.",
@@ -191,14 +225,14 @@ const DEFAULT_AREAS_TO_REFINE: Record<Mode, string[]> = {
 
 const DEFAULT_RECOMMENDATIONS: Record<Mode, string[]> = {
   look: [
-    "Keep the overall direction and only refine details that materially improve the finish.",
-    "Use clearer lighting and framing when you want a higher-confidence read from the analysis.",
-    "Treat the best-performing outfit as the baseline, then adjust only where there is a real gain.",
+    "Keep the strongest elements in place and refine only the details that create a measurable improvement.",
+    "Use cleaner lighting and framing when you want a higher-confidence read from the analysis.",
+    "Treat the winning outfit as the baseline and only deviate when there is a clear gain.",
   ],
   buy: [
     "Buy it only if it fills a real wardrobe gap rather than duplicating what you already own.",
     "Check fit, fabric, and return options before trusting the product image alone.",
-    "Prioritize pieces you can style in at least three strong outfits immediately.",
+    "Prioritize items you can style into at least three strong outfits immediately.",
   ],
 };
 
@@ -306,6 +340,10 @@ export function normalizeAnalysisResult(
     grooming: normalizeScore(record.grooming),
     color: normalizeScore(record.color),
     occasion: normalizeScore(record.occasion),
+    occasionLabel: normalizeText(
+      record.occasionLabel,
+      mode === "buy" ? "Purchase context" : "Selected occasion",
+    ),
     strongPoints: normalizeList(
       record.strongPoints ?? record.positives,
       4,
@@ -324,6 +362,7 @@ export function normalizeAnalysisResult(
     winningOutfitLabel,
     winningReason: normalizeOptionalText(record.winningReason),
     comparisonNotes: normalizeOptionalList(record.comparisonNotes, 4),
+    wardrobeSuggestions: normalizeOptionalList(record.wardrobeSuggestions, 4),
     followUpRequired,
     followUpQuestion: followUpRequired
       ? normalizeText(
@@ -334,10 +373,7 @@ export function normalizeAnalysisResult(
   };
 }
 
-export function getAreasToRefine(
-  result: AnalysisResult,
-  mode: Mode,
-) {
+export function getAreasToRefine(result: AnalysisResult, mode: Mode) {
   return result.areasToRefine.length > 0
     ? result.areasToRefine
     : DEFAULT_AREAS_TO_REFINE[mode];

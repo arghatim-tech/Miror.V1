@@ -7,9 +7,18 @@ import {
   type AnalyzeRequestBody,
   type Mode,
   type Occasion,
+  type WardrobeCategory,
+  type WardrobeItemInput,
 } from "@/lib/analysis";
+import {
+  appDictionaries,
+  defaultLanguage,
+  getLanguageDirection,
+  isSupportedLanguage,
+  type Language,
+} from "@/lib/i18n";
 import { Playfair_Display } from "next/font/google";
-import { type ChangeEvent, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -19,6 +28,91 @@ const playfair = Playfair_Display({
 
 type Theme = "dark" | "light";
 type PageState = "home" | "pricing";
+const LANGUAGE_STORAGE_KEY = "miror-language";
+const THEME_STORAGE_KEY = "miror-theme";
+const MAX_WARDROBE_ITEMS = 8;
+const OCCASION_ORDER: Occasion[] = [
+  "date",
+  "party",
+  "work",
+  "wedding",
+  "casual",
+  "custom",
+];
+const SHOWCASE_OCCASIONS: Occasion[] = ["date", "party", "work", "casual"];
+const WARDROBE_CATEGORIES: WardrobeCategory[] = [
+  "tops",
+  "pants",
+  "shoes",
+  "jackets",
+  "accessories",
+  "other",
+];
+const LANGUAGE_OPTIONS: Array<{ value: Language; label: string }> = [
+  { value: "en", label: "English" },
+  { value: "fr", label: "French" },
+  { value: "es", label: "Spanish" },
+  { value: "ar", label: "Arabic" },
+];
+const extraCopy: Record<
+  Language,
+  {
+    enable: string;
+    enabled: string;
+    remove: string;
+    itemLabel: string;
+    itemLabelPlaceholder: string;
+    buyMode: string;
+    uploadLookFirst: string;
+    uploadItemFirst: string;
+    uploadLookOrWardrobeFirst: string;
+  }
+> = {
+  en: {
+    enable: "Enable",
+    enabled: "Enabled",
+    remove: "Remove",
+    itemLabel: "Item label",
+    itemLabelPlaceholder: "Example: navy blazer",
+    buyMode: "Buy mode",
+    uploadLookFirst: "Upload an image first",
+    uploadItemFirst: "Upload an item first",
+    uploadLookOrWardrobeFirst: "Upload a look or wardrobe item first",
+  },
+  fr: {
+    enable: "Activer",
+    enabled: "Activé",
+    remove: "Retirer",
+    itemLabel: "Nom de la pièce",
+    itemLabelPlaceholder: "Exemple : blazer marine",
+    buyMode: "Mode achat",
+    uploadLookFirst: "Téléchargez d'abord une image",
+    uploadItemFirst: "Téléchargez d'abord un article",
+    uploadLookOrWardrobeFirst: "Téléchargez d'abord un look ou une pièce du dressing",
+  },
+  es: {
+    enable: "Activar",
+    enabled: "Activado",
+    remove: "Quitar",
+    itemLabel: "Nombre de la prenda",
+    itemLabelPlaceholder: "Ejemplo: blazer azul marino",
+    buyMode: "Modo compra",
+    uploadLookFirst: "Sube primero una imagen",
+    uploadItemFirst: "Sube primero una prenda",
+    uploadLookOrWardrobeFirst: "Sube primero un look o prendas del armario",
+  },
+  ar: {
+    enable: "تفعيل",
+    enabled: "مفعّل",
+    remove: "إزالة",
+    itemLabel: "اسم القطعة",
+    itemLabelPlaceholder: "مثال: بليزر كحلي",
+    buyMode: "وضع الشراء",
+    uploadLookFirst: "ارفع صورة أولاً",
+    uploadItemFirst: "ارفع قطعة أولاً",
+    uploadLookOrWardrobeFirst: "ارفع إطلالة أو قطعة من الخزانة أولاً",
+  },
+};
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -108,84 +202,45 @@ async function readFileAsDataUrl(file: File): Promise<string> {
   }
 }
 
-const occasionLabels: Record<Occasion, string> = {
-  date: "Date",
-  party: "Party",
-  work: "Work",
-  wedding: "Wedding",
-  casual: "Casual",
-};
+function inferWardrobeCategory(fileName: string): WardrobeCategory {
+  const normalized = fileName.toLowerCase();
 
-const statCards = [
-  ["4.2K", "Looks analyzed"],
-  ["94%", "Said it helped"],
-  ["<30S", "Average analysis time"],
-  ["6", "Occasion types"],
-] as const;
+  if (
+    /(shirt|tee|t-shirt|polo|blouse|top|hoodie|sweater|knit|cardigan)/.test(
+      normalized,
+    )
+  ) {
+    return "tops";
+  }
 
-const processSteps = [
-  {
-    step: "01 /",
-    token: "Upload",
-    title: "Upload your photo",
-    description:
-      "Take a clear selfie or use a recent full-look shot. Better input gives better coaching.",
-  },
-  {
-    step: "02 /",
-    token: "Context",
-    title: "Choose your occasion",
-    description:
-      "Date, party, work, wedding, or casual. The same outfit can succeed or fail depending on context.",
-  },
-  {
-    step: "03 /",
-    token: "Analysis",
-    title: "AI reads the full picture",
-    description:
-      "Outfit harmony, grooming, color balance, and occasion fit are scored together rather than in isolation.",
-  },
-  {
-    step: "04 /",
-    token: "Action",
-    title: "Get useful next steps",
-    description:
-      "What to keep, what to swap, what to buy, and what to stop pretending works.",
-  },
-] as const;
+  if (/(pant|trouser|jean|chino|short|skirt)/.test(normalized)) {
+    return "pants";
+  }
 
-const featureCards = [
-  {
-    title: "Skin Tone and Color Matching",
-    description:
-      "Identifies your approximate tone category and points toward colors that flatter instead of draining you.",
-  },
-  {
-    title: "Face Shape and Haircut Advice",
-    description:
-      "Suggests better framing, haircut direction, and beard balance so the face and outfit stop fighting each other.",
-  },
-  {
-    title: "Outfit Scoring and Comparison",
-    description:
-      "Upload up to 3 looks. MIROR ranks them and explains why one wins for the moment you are dressing for.",
-  },
-  {
-    title: "Occasion-Based Context",
-    description:
-      "A look that works casually can fail on a date. Recommendations adapt to the setting instead of staying generic.",
-  },
-  {
-    title: "Presence and Confidence Cues",
-    description:
-      "Presentation matters. Posture, polish, and overall sharpness are treated as part of the final impression.",
-  },
-  {
-    title: "Wardrobe Memory",
-    description:
-      "Paid users can save pieces over time and build combinations without restarting the decision process from zero.",
-  },
-] as const;
+  if (/(shoe|sneaker|boot|loafer|heel|sandal)/.test(normalized)) {
+    return "shoes";
+  }
+
+  if (/(jacket|blazer|coat|overcoat|bomber|outerwear)/.test(normalized)) {
+    return "jackets";
+  }
+
+  if (/(belt|watch|bag|hat|cap|scarf|tie|ring|chain|necklace|glasses)/.test(normalized)) {
+    return "accessories";
+  }
+
+  return "other";
+}
+
+function inferWardrobeLabel(fileName: string, index: number) {
+  const cleaned = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned ? cleaned.slice(0, 80) : `Wardrobe item ${index + 1}`;
+}
 
 function BackgroundDecor({ isDark }: { isDark: boolean }) {
   return (
@@ -238,27 +293,70 @@ function Score({
 export default function Page() {
   const [theme, setTheme] = useState<Theme>("dark");
   const [page, setPage] = useState<PageState>("home");
+  const [language, setLanguage] = useState<Language>(defaultLanguage);
   const [mode, setMode] = useState<Mode>("look");
   const [occasion, setOccasion] = useState<Occasion>("date");
+  const [customOccasion, setCustomOccasion] = useState("");
   const [groupMode, setGroupMode] = useState(false);
   const [targetPersonNote, setTargetPersonNote] = useState("");
   const [selfie, setSelfie] = useState<string | null>(null);
   const [outfits, setOutfits] = useState<Array<string | null>>([null, null, null]);
   const [itemToBuy, setItemToBuy] = useState<string | null>(null);
+  const [wardrobeItems, setWardrobeItems] = useState<WardrobeItemInput[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [followUpAnswer, setFollowUpAnswer] = useState("");
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+
+    if (storedLanguage && isSupportedLanguage(storedLanguage)) {
+      setLanguage(storedLanguage);
+    }
+
+    if (storedTheme === "dark" || storedTheme === "light") {
+      setTheme(storedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const dictionary = appDictionaries[language] ?? appDictionaries[defaultLanguage];
+  const extra = extraCopy[language];
   const isDark = theme === "dark";
+  const direction = getLanguageDirection(language);
   const uploadedOutfitImages = outfits.filter((item): item is string => Boolean(item));
-  const canAnalyze = mode === "look" ? Boolean(selfie) : Boolean(itemToBuy);
+  const hasWardrobe = wardrobeItems.length > 0;
+  const canAnalyze =
+    mode === "look"
+      ? Boolean(selfie || uploadedOutfitImages.length > 0 || hasWardrobe)
+      : Boolean(itemToBuy);
   const previewImage = mode === "look" ? selfie : itemToBuy;
   const winningOutfitImage =
     mode === "look" && result && result.winningOutfitIndex > 0
       ? uploadedOutfitImages[result.winningOutfitIndex - 1] ?? null
       : null;
-  const displayImage = winningOutfitImage ?? previewImage;
+  const displayImage = winningOutfitImage ?? previewImage ?? wardrobeItems[0]?.image ?? null;
   const comparisonMode = mode === "look" && uploadedOutfitImages.length > 1;
   const showWinningOutfit =
     Boolean(result) &&
@@ -270,6 +368,16 @@ export default function Page() {
     Boolean(result?.followUpRequired && result.followUpQuestion.trim());
   const canSubmitFollowUp = followUpAnswer.trim().length > 0 && !loading;
   const visibleAreasToRefine = result ? getAreasToRefine(result, mode) : [];
+  const selectedOccasionLabel =
+    occasion === "custom"
+      ? customOccasion.trim() || dictionary.demoSection.occasionLabels.custom
+      : dictionary.demoSection.occasionLabels[occasion];
+  const statCards = [
+    ["4.2K", dictionary.stats[0]],
+    ["94%", dictionary.stats[1]],
+    ["<30S", dictionary.stats[2]],
+    ["6", dictionary.stats[3]],
+  ] as const;
 
   const pageStyle = {
     fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
@@ -303,11 +411,20 @@ export default function Page() {
     : "border-[#d7ccb7] text-[#6f6658] hover:border-amber-700/40 hover:text-amber-900";
   const sectionDividerClass = isDark ? "bg-[#2b241b]" : "bg-[#ddd3c1]";
   const sectionSurfaceClass = isDark ? "bg-[#0f0c09]" : "bg-[#f7f1e8]";
-  const logoClass = cx(playfair.className, "select-none text-[2rem] font-medium uppercase tracking-[0.32em]");
+  const logoClass = cx(
+    playfair.className,
+    "select-none text-[2rem] font-medium uppercase tracking-[0.32em]",
+  );
   const headingClass = playfair.className;
   const sectionEyebrowClass = cx("text-[11px] uppercase tracking-[0.24em]", accentTextClass);
   const inactivePillClass = cx("border", secondaryButtonClass);
   const inputShellClass = cx(softPanelClass, "border-dashed");
+  const selectClass = cx(
+    "rounded-sm border px-4 py-2 text-sm outline-none transition-colors",
+    isDark
+      ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] focus:border-[#d2ab55]"
+      : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] focus:border-amber-700",
+  );
 
   const pillClass = (active: boolean) =>
     cx(
@@ -343,6 +460,7 @@ export default function Page() {
     const dataUrl = await readFileAsDataUrl(file);
     setter(dataUrl);
     resetAnalysisFeedback();
+    event.target.value = "";
   }
 
   async function onOutfitImage(event: ChangeEvent<HTMLInputElement>, index: number) {
@@ -354,6 +472,65 @@ export default function Page() {
     const dataUrl = await readFileAsDataUrl(file);
     setOutfits((currentOutfits) =>
       currentOutfits.map((item, itemIndex) => (itemIndex === index ? dataUrl : item)),
+    );
+    resetAnalysisFeedback();
+    event.target.value = "";
+  }
+
+  async function onWardrobeUpload(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    const nextFiles = files.slice(0, Math.max(0, MAX_WARDROBE_ITEMS - wardrobeItems.length));
+
+    if (nextFiles.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
+    const startingIndex = wardrobeItems.length;
+    const nextItems = await Promise.all(
+      nextFiles.map(async (file, index) => ({
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `wardrobe-${Date.now()}-${index}`,
+        image: await readFileAsDataUrl(file),
+        label: inferWardrobeLabel(file.name, startingIndex + index),
+        category: inferWardrobeCategory(file.name),
+      })),
+    );
+
+    setWardrobeItems((currentItems) => [...currentItems, ...nextItems]);
+    resetAnalysisFeedback();
+    event.target.value = "";
+  }
+
+  function updateWardrobeItem(
+    itemId: string,
+    field: "label" | "category",
+    value: string,
+  ) {
+    setWardrobeItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              [field]:
+                field === "category" ? (value as WardrobeCategory) : value.slice(0, 80),
+            }
+          : item,
+      ),
+    );
+    resetAnalysisFeedback();
+  }
+
+  function removeWardrobeItem(itemId: string) {
+    setWardrobeItems((currentItems) =>
+      currentItems.filter((item) => item.id !== itemId),
     );
     resetAnalysisFeedback();
   }
@@ -370,14 +547,17 @@ export default function Page() {
     }
 
     const requestBody: AnalyzeRequestBody = {
+      language,
       mode,
       occasion,
+      customOccasion: customOccasion.trim(),
       groupMode,
       targetPersonNote,
       followUpAnswer: clarification.trim(),
       selfie,
       outfitImages: uploadedOutfitImages,
       itemToBuy,
+      wardrobeItems,
     };
 
     try {
@@ -410,58 +590,86 @@ export default function Page() {
     }
   }
 
+  function renderLanguageSwitcher() {
+    return (
+      <label className="block">
+        <span className="sr-only">{dictionary.common.language}</span>
+        <select
+          value={language}
+          aria-label={dictionary.common.language}
+          onChange={(event) => {
+            if (isSupportedLanguage(event.target.value)) {
+              setLanguage(event.target.value);
+            }
+          }}
+          className={selectClass}
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
   if (page === "pricing") {
     return (
-      <div className={wrapClass} style={pageStyle}>
+      <div className={wrapClass} style={pageStyle} dir={direction} lang={language}>
         <BackgroundDecor isDark={isDark} />
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-8">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <button
               type="button"
               onClick={() => setPage("home")}
               className={cx("text-sm transition-colors", mutedClass, "hover:text-inherit")}
             >
-              Back to home
+              {dictionary.common.backToHome}
             </button>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={cx(
-                "rounded-sm border px-4 py-2 text-sm transition-colors",
-                accentBorderClass,
-                accentTextClass,
-              )}
-            >
-              {isDark ? "White mode" : "Black mode"}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              {renderLanguageSwitcher()}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={cx(
+                  "rounded-sm border px-4 py-2 text-sm transition-colors",
+                  accentBorderClass,
+                  accentTextClass,
+                )}
+              >
+                {isDark ? dictionary.common.whiteMode : dictionary.common.blackMode}
+              </button>
+            </div>
           </div>
 
           <div className="mt-16 text-center">
             <div className={cx("inline-flex border px-4 py-2 text-[11px] uppercase tracking-[0.24em]", accentBorderClass, accentTextClass)}>
-              Pricing
+              {dictionary.common.pricing}
             </div>
             <h1 className={cx(headingClass, "mt-6 text-5xl md:text-6xl")}>
-              Make money without making it feel cheap.
+              {dictionary.pricingState.title}
             </h1>
             <p className={cx("mx-auto mt-5 max-w-3xl text-lg leading-8", mutedClass)}>
-              Free users unlock a limited analysis by watching an ad. Paid plans remove ads and
-              open the serious features.
+              {dictionary.pricingState.description}
             </p>
           </div>
 
-          <PricingGrid isDark={isDark} onFreePlanClick={() => setPage("home")} />
+          <PricingGrid
+            isDark={isDark}
+            language={language}
+            onFreePlanClick={() => setPage("home")}
+          />
 
           <div className={cx(panelClass, "mt-10 p-8")}>
             <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
-              Hosted checkout
+              {dictionary.common.hostedCheckout}
             </div>
             <h2 className={cx(headingClass, "mt-3 text-3xl")}>
-              Coach and Pro now open in Stripe Checkout.
+              {dictionary.pricingState.hostedCheckout}
             </h2>
             <p className={cx("mt-3", mutedClass)}>
-              The first billing version stays intentionally small: Stripe handles
-              the payment page now, and subscription syncing lands in the backend
-              phase next.
+              {dictionary.pricingState.hostedCheckoutDescription}
             </p>
           </div>
         </div>
@@ -470,7 +678,7 @@ export default function Page() {
   }
 
   return (
-    <div className={wrapClass} style={pageStyle}>
+    <div className={wrapClass} style={pageStyle} dir={direction} lang={language}>
       <BackgroundDecor isDark={isDark} />
 
       <header
@@ -479,7 +687,7 @@ export default function Page() {
           isDark ? "border-[#2b241b] bg-[#090806]/92" : "border-[#ddd3c1] bg-[#fcfaf5]/90",
         )}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div className={logoClass}>
             <span className={primaryTextClass}>MIR</span>
             <span className={accentTextClass}>O</span>
@@ -488,24 +696,25 @@ export default function Page() {
 
           <nav className="hidden items-center gap-10 md:flex">
             <a href="#process" className={cx("text-[11px] uppercase tracking-[0.16em] transition-colors", mutedClass, "hover:text-inherit")}>
-              How it works
+              {dictionary.nav.howItWorks}
             </a>
             <a href="#features" className={cx("text-[11px] uppercase tracking-[0.16em] transition-colors", mutedClass, "hover:text-inherit")}>
-              Features
+              {dictionary.nav.features}
             </a>
             <a href="#demo" className={cx("text-[11px] uppercase tracking-[0.16em] transition-colors", mutedClass, "hover:text-inherit")}>
-              Try it
+              {dictionary.nav.tryIt}
             </a>
             <button
               type="button"
               onClick={() => setPage("pricing")}
               className={cx("text-[11px] uppercase tracking-[0.16em] transition-colors", mutedClass, "hover:text-inherit")}
             >
-              Pricing
+              {dictionary.nav.pricing}
             </button>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {renderLanguageSwitcher()}
             <button
               type="button"
               onClick={toggleTheme}
@@ -515,14 +724,14 @@ export default function Page() {
                 accentTextClass,
               )}
             >
-              {isDark ? "White mode" : "Black mode"}
+              {isDark ? dictionary.common.whiteMode : dictionary.common.blackMode}
             </button>
             <button
               type="button"
               onClick={() => setPage("pricing")}
               className={cx("rounded-sm px-5 py-2.5 text-sm font-semibold", accentButtonClass)}
             >
-              Get Started
+              {dictionary.common.getStarted}
             </button>
           </div>
         </div>
@@ -533,14 +742,14 @@ export default function Page() {
           <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1.02fr_0.98fr]">
             <div className="relative">
               <div className={cx("inline-flex border px-4 py-2 text-[11px] uppercase tracking-[0.24em]", accentBorderClass, accentTextClass)}>
-                Private AI appearance coach
+                {dictionary.hero.eyebrow}
               </div>
               <h1 className={cx(headingClass, "mt-8 max-w-5xl text-6xl leading-[0.92] md:text-[6.2rem]")}>
-                Look your <span className={cx(accentTextClass, "italic")}>absolute best.</span>
+                {dictionary.hero.titleStart}{" "}
+                <span className={cx(accentTextClass, "italic")}>{dictionary.hero.titleAccent}</span>
               </h1>
               <p className={cx("mt-8 max-w-xl text-lg leading-8", mutedClass)}>
-                Upload a selfie, choose the occasion, and get sharp guidance on outfit harmony,
-                grooming, colors, and whether the whole thing actually works before you leave.
+                {dictionary.hero.description}
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
                 <a
@@ -550,7 +759,7 @@ export default function Page() {
                     accentButtonClass,
                   )}
                 >
-                  Analyze my look
+                  {dictionary.hero.analyze}
                 </a>
                 <a
                   href="#process"
@@ -559,7 +768,7 @@ export default function Page() {
                     secondaryButtonClass,
                   )}
                 >
-                  See how it works
+                  {dictionary.hero.seeProcess}
                 </a>
               </div>
             </div>
@@ -584,7 +793,7 @@ export default function Page() {
                       <span className={primaryTextClass}>R</span>
                     </div>
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                      {mode === "buy" ? "Buy mode" : `${occasionLabels[occasion]} mode`}
+                      {mode === "buy" ? extra.buyMode : selectedOccasionLabel}
                     </div>
                   </div>
 
@@ -595,18 +804,18 @@ export default function Page() {
                     )}
                   >
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                      Upload preview
+                      {dictionary.showcase.uploadPreview}
                     </div>
                     <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
-                      Selfie or full look
+                      {dictionary.showcase.selfieOrLook}
                     </div>
                     <div className={cx("mt-2 text-sm", mutedClass)}>
-                      Keep it clear. MIROR does the judging after the upload.
+                      {dictionary.showcase.keepItClear}
                     </div>
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {["Date", "Party", "Work", "Casual"].map((option, index) => (
+                    {SHOWCASE_OCCASIONS.map((option, index) => (
                       <span
                         key={option}
                         className={cx(
@@ -618,7 +827,7 @@ export default function Page() {
                               : "bg-[#eee5d8] text-[#6f6658]",
                         )}
                       >
-                        {option}
+                        {dictionary.demoSection.occasionLabels[option]}
                       </span>
                     ))}
                   </div>
@@ -630,7 +839,7 @@ export default function Page() {
                     )}
                   >
                     <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                      Appearance score
+                      {dictionary.showcase.appearanceScore}
                     </div>
                     <div className="mt-4 space-y-3">
                       <Score isDark={isDark} label="Outfit harmony" value={82} />
@@ -646,7 +855,7 @@ export default function Page() {
                           : "border-emerald-300 bg-emerald-50 text-emerald-700",
                       )}
                     >
-                      Mostly ready
+                      {dictionary.showcase.mostlyReady}
                     </div>
                   </div>
                 </div>
@@ -659,10 +868,10 @@ export default function Page() {
                 )}
               >
                 <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                  Quick note
+                  {dictionary.showcase.quickNote}
                 </div>
                 <div className={cx(headingClass, "mt-3 text-2xl leading-tight")}>
-                  Sharper collar. Better balance.
+                  {dictionary.showcase.quickNoteText}
                 </div>
               </div>
 
@@ -673,12 +882,12 @@ export default function Page() {
                 )}
               >
                 <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                  MIROR reads
+                  {dictionary.showcase.mirorReads}
                 </div>
                 <div className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
-                  <div>Suitability for the setting</div>
-                  <div>Color discipline near the face</div>
-                  <div>Whether the look feels intentional</div>
+                  {dictionary.showcase.readsList.map((item) => (
+                    <div key={item}>{item}</div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -711,17 +920,17 @@ export default function Page() {
 
         <section id="process" className="px-6 py-24">
           <div className="mx-auto max-w-7xl">
-            <div className={sectionEyebrowClass}>The process</div>
+            <div className={sectionEyebrowClass}>{dictionary.process.eyebrow}</div>
             <h2 className={cx(headingClass, "mt-6 max-w-4xl text-5xl leading-[1.02] md:text-7xl")}>
-              Four steps to <span className={cx(accentTextClass, "italic")}>knowing you look good.</span>
+              {dictionary.process.titleStart}{" "}
+              <span className={cx(accentTextClass, "italic")}>{dictionary.process.titleAccent}</span>
             </h2>
             <p className={cx("mt-5 max-w-xl text-lg leading-8", mutedClass)}>
-              No opinions from friends. No guessing in the mirror. Just fast, private, honest
-              feedback.
+              {dictionary.process.description}
             </p>
 
             <div className={cx("mt-16 grid gap-px md:grid-cols-4", sectionDividerClass)}>
-              {processSteps.map((step) => (
+              {dictionary.process.steps.map((step) => (
                 <div
                   key={step.title}
                   className={cx(
@@ -745,17 +954,19 @@ export default function Page() {
 
         <section id="features" className={cx("px-6 py-24 transition-colors duration-300", sectionSurfaceClass)}>
           <div className="mx-auto max-w-7xl">
-            <div className={sectionEyebrowClass}>What we analyze</div>
+            <div className={sectionEyebrowClass}>{dictionary.featuresSection.eyebrow}</div>
             <h2 className={cx(headingClass, "mt-6 max-w-4xl text-5xl leading-[1.02] md:text-7xl")}>
-              Your complete <span className={cx(accentTextClass, "italic")}>appearance picture.</span>
+              {dictionary.featuresSection.titleStart}{" "}
+              <span className={cx(accentTextClass, "italic")}>
+                {dictionary.featuresSection.titleAccent}
+              </span>
             </h2>
             <p className={cx("mt-5 max-w-xl text-lg leading-8", mutedClass)}>
-              More than a photo filter. A coaching system built around the decisions people actually
-              struggle with.
+              {dictionary.featuresSection.description}
             </p>
 
             <div className={cx("mt-16 grid gap-px md:grid-cols-3", sectionDividerClass)}>
-              {featureCards.map((card, index) => (
+              {dictionary.featuresSection.cards.map((card, index) => (
                 <div
                   key={card.title}
                   className={cx(
@@ -794,7 +1005,7 @@ export default function Page() {
                   <span className={accentTextClass}>O</span>
                   <span className={primaryTextClass}>R</span>
                 </div>
-                <div className={mutedClass}>Demo</div>
+                <div className={mutedClass}>{dictionary.common.demo}</div>
               </div>
 
               <div className="p-6">
@@ -807,7 +1018,7 @@ export default function Page() {
                     }}
                     className={pillClass(mode === "look")}
                   >
-                    Current look
+                    {dictionary.demoSection.currentLook}
                   </button>
                   <button
                     type="button"
@@ -817,7 +1028,7 @@ export default function Page() {
                     }}
                     className={pillClass(mode === "buy")}
                   >
-                    Should I buy this?
+                    {dictionary.demoSection.buyThis}
                   </button>
                 </div>
 
@@ -839,13 +1050,13 @@ export default function Page() {
                       ) : (
                         <>
                           <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                            Primary image
+                            {dictionary.demoSection.primaryImage}
                           </div>
                           <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
-                            Upload selfie or full look
+                            {dictionary.demoSection.uploadLookTitle}
                           </div>
                           <div className={cx("mt-2 text-sm", mutedClass)}>
-                            Real upload preview here. Gemini reads the image after you submit it.
+                            {dictionary.demoSection.uploadLookDescription}
                           </div>
                         </>
                       )}
@@ -854,9 +1065,11 @@ export default function Page() {
                     <div className={cx(softPanelClass, "p-4")}>
                       <div className="flex items-center justify-between gap-4">
                         <div>
-                          <div className={cx("font-semibold", accentTextClass)}>Group photo mode</div>
+                          <div className={cx("font-semibold", accentTextClass)}>
+                            {dictionary.demoSection.groupMode}
+                          </div>
                           <div className={cx("mt-1 text-sm", mutedClass)}>
-                            Add a short note so MIROR knows exactly which person to judge.
+                            {dictionary.demoSection.groupModeDescription}
                           </div>
                         </div>
                         <button
@@ -872,13 +1085,15 @@ export default function Page() {
                               : cx("border", accentBorderClass, accentTextClass),
                           )}
                         >
-                          {groupMode ? "Enabled" : "Enable"}
+                          {groupMode ? extra.enabled : extra.enable}
                         </button>
                       </div>
 
                       {groupMode ? (
                         <div className="mt-4">
-                          <div className={cx("mb-2 text-sm", mutedClass)}>Who are you in the photo?</div>
+                          <div className={cx("mb-2 text-sm", mutedClass)}>
+                            {dictionary.demoSection.targetPerson}
+                          </div>
                           <textarea
                             value={targetPersonNote}
                             onChange={(event) => {
@@ -887,7 +1102,7 @@ export default function Page() {
                             }}
                             rows={3}
                             maxLength={240}
-                            placeholder="Example: I am the person in the middle wearing the black jacket."
+                            placeholder={dictionary.demoSection.targetPersonPlaceholder}
                             className={cx(
                               "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors placeholder:transition-colors",
                               isDark
@@ -901,9 +1116,11 @@ export default function Page() {
 
                     <div>
                       <div className="flex items-center justify-between">
-                        <div className={cx("mb-3 text-sm", mutedClass)}>Outfit options</div>
+                        <div className={cx("mb-3 text-sm", mutedClass)}>
+                          {dictionary.demoSection.outfitOptions}
+                        </div>
                         <div className={cx("mb-3 text-xs uppercase tracking-[0.14em]", subduedClass)}>
-                          Up to 3 looks
+                          {dictionary.demoSection.upToThreeLooks}
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-3">
@@ -952,13 +1169,13 @@ export default function Page() {
                       ) : (
                         <>
                           <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                            Product image
+                            {dictionary.demoSection.productImage}
                           </div>
                           <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
-                            Upload clothing item
+                            {dictionary.demoSection.uploadItemTitle}
                           </div>
                           <div className={cx("mt-2 text-sm", mutedClass)}>
-                            MIROR checks visual appeal, versatility, and whether it deserves the money.
+                            {dictionary.demoSection.uploadItemDescription}
                           </div>
                         </>
                       )}
@@ -966,12 +1183,137 @@ export default function Page() {
                   </div>
                 )}
 
+                <div className={cx(softPanelClass, "mt-6 p-4")}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="max-w-xl">
+                      <div className={cx("font-semibold", accentTextClass)}>
+                        {dictionary.demoSection.wardrobeTitle}
+                      </div>
+                      <p className={cx("mt-1 text-sm leading-7", mutedClass)}>
+                        {dictionary.demoSection.wardrobeDescription}
+                      </p>
+                    </div>
+                    <label
+                      className={cx(
+                        "cursor-pointer rounded-sm px-4 py-2 text-sm font-semibold",
+                        accentButtonClass,
+                      )}
+                    >
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={onWardrobeUpload}
+                      />
+                      {dictionary.demoSection.wardrobeUpload}
+                    </label>
+                  </div>
+                  <p className={cx("mt-3 text-xs leading-6", subduedClass)}>
+                    {dictionary.demoSection.wardrobeHint}
+                  </p>
+
+                  {wardrobeItems.length > 0 ? (
+                    <div className="mt-4 grid gap-3">
+                      {wardrobeItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className={cx(
+                            "rounded-2xl border p-3",
+                            isDark
+                              ? "border-[#4a3d2f] bg-[#120f0b]"
+                              : "border-[#ddd3c1] bg-[#fffdf8]",
+                          )}
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row">
+                            <img
+                              src={item.image}
+                              alt={item.label}
+                              className="h-24 w-full rounded-xl object-cover sm:w-24"
+                            />
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className={cx("text-sm font-semibold", primaryTextClass)}>
+                                  {item.label}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeWardrobeItem(item.id)}
+                                  className={cx(
+                                    "text-xs uppercase tracking-[0.14em] transition-colors",
+                                    mutedClass,
+                                    "hover:text-inherit",
+                                  )}
+                                >
+                                  {extra.remove}
+                                </button>
+                              </div>
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <label className="block">
+                                  <span className={cx("mb-1 block text-[11px] uppercase tracking-[0.16em]", subduedClass)}>
+                                    {extra.itemLabel}
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={item.label}
+                                    placeholder={extra.itemLabelPlaceholder}
+                                    onChange={(event) =>
+                                      updateWardrobeItem(item.id, "label", event.target.value)
+                                    }
+                                    className={cx(
+                                      "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                                      isDark
+                                        ? "border-[#4a3d2f] bg-[#181411] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                                        : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                                    )}
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className={cx("mb-1 block text-[11px] uppercase tracking-[0.16em]", subduedClass)}>
+                                    {dictionary.demoSection.category}
+                                  </span>
+                                  <select
+                                    value={item.category}
+                                    onChange={(event) =>
+                                      updateWardrobeItem(item.id, "category", event.target.value)
+                                    }
+                                    className={cx(selectClass, "w-full")}
+                                  >
+                                    {WARDROBE_CATEGORIES.map((category) => (
+                                      <option key={category} value={category}>
+                                        {dictionary.demoSection.wardrobeCategoryLabels[category]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className={cx(
+                        "mt-4 rounded-2xl border border-dashed px-4 py-5 text-sm",
+                        isDark
+                          ? "border-[#4a3d2f] bg-[#120f0b] text-[#cabdab]"
+                          : "border-[#ddd3c1] bg-[#fffdf8] text-[#6f6658]",
+                      )}
+                    >
+                      {dictionary.demoSection.wardrobeSuggestionsEmpty}
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-6">
                   <div className={cx("mb-3 text-sm", mutedClass)}>
-                    {mode === "buy" ? "Intended occasion" : "Occasion"}
+                    {mode === "buy"
+                      ? dictionary.demoSection.intendedOccasion
+                      : dictionary.demoSection.occasion}
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                    {(Object.keys(occasionLabels) as Occasion[]).map((key) => (
+                    {OCCASION_ORDER.map((key) => (
                       <button
                         key={key}
                         type="button"
@@ -981,11 +1323,35 @@ export default function Page() {
                         }}
                         className={squareButtonClass(occasion === key)}
                       >
-                        {occasionLabels[key]}
+                        {dictionary.demoSection.occasionLabels[key]}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {occasion === "custom" ? (
+                  <div className="mt-4">
+                    <div className={cx("mb-2 text-sm", mutedClass)}>
+                      {dictionary.demoSection.customOccasionLabel}
+                    </div>
+                    <input
+                      type="text"
+                      value={customOccasion}
+                      onChange={(event) => {
+                        setCustomOccasion(event.target.value);
+                        resetAnalysisFeedback();
+                      }}
+                      maxLength={120}
+                      placeholder={dictionary.demoSection.customOccasionPlaceholder}
+                      className={cx(
+                        "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                        isDark
+                          ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                          : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                      )}
+                    />
+                  </div>
+                ) : null}
 
                 <button
                   type="button"
@@ -999,8 +1365,8 @@ export default function Page() {
                   {loading
                     ? "Analyzing..."
                     : mode === "look"
-                      ? "Analyze my look"
-                      : "Analyze this item"}
+                      ? dictionary.demoSection.analyzeLook
+                      : dictionary.demoSection.analyzeItem}
                 </button>
 
                 {analysisError ? (
@@ -1019,8 +1385,12 @@ export default function Page() {
             </div>
 
             <div className={cx(panelClass, "rounded-[1.5rem] p-6")}>
-              <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>Results</div>
-              <h2 className={cx(headingClass, "mt-3 text-4xl")}>Professional analysis, same MIROR layout.</h2>
+              <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
+                {dictionary.common.results}
+              </div>
+              <h2 className={cx(headingClass, "mt-3 text-4xl")}>
+                {dictionary.resultsSection.title}
+              </h2>
 
               <div className="mt-8 grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
                 <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
@@ -1029,7 +1399,7 @@ export default function Page() {
                       src={displayImage}
                       alt={
                         showWinningOutfit
-                          ? `${result?.winningOutfitLabel ?? "Winning outfit"} preview`
+                          ? result?.winningOutfitLabel ?? dictionary.resultsSection.winningOutfit
                           : mode === "look"
                             ? "Result preview"
                             : "Item preview"
@@ -1038,14 +1408,18 @@ export default function Page() {
                     />
                   ) : (
                     <div className={cx("flex h-[420px] items-center justify-center rounded-2xl text-center text-sm", mutedClass)}>
-                      {mode === "look" ? "Upload an image first" : "Upload an item first"}
+                      {mode === "buy"
+                        ? extra.uploadItemFirst
+                        : hasWardrobe
+                          ? extra.uploadLookOrWardrobeFirst
+                          : extra.uploadLookFirst}
                     </div>
                   )}
 
                   {showWinningOutfit ? (
                     <div className={cx("mt-4 rounded-xl border px-4 py-3 text-sm", isDark ? "border-[#4b3d2e] bg-[#120f0b]" : "border-[#e2d6c3] bg-[#fffaf1]")}>
                       <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
-                        Winning outfit
+                        {dictionary.resultsSection.winningOutfit}
                       </div>
                       <div className={cx("mt-2 font-semibold", primaryTextClass)}>
                         {result?.winningOutfitLabel}
@@ -1059,26 +1433,22 @@ export default function Page() {
                   {!result ? (
                     <div className="flex min-h-[420px] flex-col justify-center">
                       <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
-                        Structured output
+                        {dictionary.resultsSection.emptyEyebrow}
                       </div>
                       <div className={cx(headingClass, "mt-4 text-3xl")}>
-                        What MIROR returns every single time
+                        {dictionary.resultsSection.emptyTitle}
                       </div>
                       <ul className={cx("mt-6 space-y-3 text-base", mutedClass)}>
-                        <li>- Overall assessment</li>
-                        <li>- Winning outfit when comparison is active</li>
-                        <li>- Strong points</li>
-                        <li>- Areas to refine</li>
-                        <li>- Recommended improvements</li>
-                        <li>- Scores that are not ridiculously generous</li>
-                        <li>- Best outfit or buy/skip decision</li>
+                        {dictionary.resultsSection.emptyItems.map((item) => (
+                          <li key={item}>- {item}</li>
+                        ))}
                       </ul>
                     </div>
                   ) : (
                     <div>
                       <div className={cx(softPanelClass, "p-5")}>
                         <div className={cx("text-[11px] uppercase tracking-[0.22em]", accentTextClass)}>
-                          Overall assessment
+                          {dictionary.resultsSection.overallAssessment}
                         </div>
                         <h3 className={cx(headingClass, "mt-3 text-4xl leading-tight")}>
                           {result.assessment}
@@ -1089,7 +1459,7 @@ export default function Page() {
                       {showWinningOutfit ? (
                         <div className={cx("mt-4 rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
-                            Winning outfit
+                            {dictionary.resultsSection.winningOutfit}
                           </div>
                           <div className={cx("mt-2 text-xl font-semibold", primaryTextClass)}>
                             {result.winningOutfitLabel}
@@ -1113,21 +1483,41 @@ export default function Page() {
                       <div className="mt-6 space-y-4">
                         <Score
                           isDark={isDark}
-                          label={mode === "buy" ? "Visual appeal" : "Confidence / Presence"}
+                          label={
+                            mode === "buy"
+                              ? dictionary.resultsSection.scores.visualAppeal
+                              : dictionary.resultsSection.scores.confidence
+                          }
                           value={result.confidence}
                         />
                         <Score
                           isDark={isDark}
-                          label={mode === "buy" ? "Worth buying" : "Outfit strength"}
+                          label={
+                            mode === "buy"
+                              ? dictionary.resultsSection.scores.worthBuying
+                              : dictionary.resultsSection.scores.outfitStrength
+                          }
                           value={result.outfit}
                         />
                         {mode === "look" ? (
-                          <Score isDark={isDark} label="Grooming" value={result.grooming} />
+                          <Score
+                            isDark={isDark}
+                            label={dictionary.resultsSection.scores.grooming}
+                            value={result.grooming}
+                          />
                         ) : null}
-                        <Score isDark={isDark} label="Color harmony" value={result.color} />
                         <Score
                           isDark={isDark}
-                          label={mode === "buy" ? "Versatility" : "Occasion fit"}
+                          label={dictionary.resultsSection.scores.colorHarmony}
+                          value={result.color}
+                        />
+                        <Score
+                          isDark={isDark}
+                          label={
+                            mode === "buy"
+                              ? dictionary.resultsSection.scores.versatility
+                              : dictionary.resultsSection.scores.occasionFit
+                          }
                           value={result.occasion}
                         />
                       </div>
@@ -1135,7 +1525,7 @@ export default function Page() {
                       <div className="mt-8 grid gap-4 md:grid-cols-2">
                         <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-500">
-                            Strong points
+                            {dictionary.resultsSection.strongPoints}
                           </div>
                           <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
                             {result.strongPoints.map((item) => (
@@ -1149,7 +1539,7 @@ export default function Page() {
 
                         <div className={cx("rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className="text-[11px] uppercase tracking-[0.18em] text-red-500">
-                            Areas to refine
+                            {dictionary.resultsSection.areasToRefine}
                           </div>
                           <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
                             {visibleAreasToRefine.map((item) => (
@@ -1169,7 +1559,7 @@ export default function Page() {
                         )}
                       >
                         <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
-                          Recommended improvements
+                          {dictionary.resultsSection.recommendedImprovements}
                         </div>
                         <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
                           {result.recommendedImprovements.map((item) => (
@@ -1181,10 +1571,32 @@ export default function Page() {
                         </ul>
                       </div>
 
+                      {result.wardrobeSuggestions.length > 0 || wardrobeItems.length > 0 ? (
+                        <div className={cx("mt-4 rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
+                          <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
+                            {dictionary.demoSection.wardrobeSuggestions}
+                          </div>
+                          {result.wardrobeSuggestions.length > 0 ? (
+                            <ul className={cx("mt-3 space-y-2 text-sm", mutedClass)}>
+                              {result.wardrobeSuggestions.map((item) => (
+                                <li key={item} className="flex gap-3">
+                                  <span className={accentTextClass}>+</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className={cx("mt-3 text-sm leading-7", mutedClass)}>
+                              {dictionary.demoSection.wardrobeSuggestionsEmpty}
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
                       {showFollowUp ? (
                         <div className={cx("mt-4 rounded-2xl p-4", isDark ? "bg-[#181411]" : "border border-[#e3d9c7] bg-[#f7f1e8]")}>
                           <div className={cx("text-[11px] uppercase tracking-[0.18em]", accentTextClass)}>
-                            Clarification needed
+                            {dictionary.resultsSection.clarificationNeeded}
                           </div>
                           <p className={cx("mt-3 text-sm leading-7", mutedClass)}>
                             {result.followUpQuestion}
@@ -1194,7 +1606,7 @@ export default function Page() {
                               type="text"
                               value={followUpAnswer}
                               onChange={(event) => setFollowUpAnswer(event.target.value)}
-                              placeholder="Add a short answer"
+                              placeholder={dictionary.resultsSection.followUpPlaceholder}
                               className={cx(
                                 "min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
                                 isDark
@@ -1211,7 +1623,7 @@ export default function Page() {
                                 accentButtonClass,
                               )}
                             >
-                              Submit
+                              {dictionary.resultsSection.submit}
                             </button>
                           </div>
                         </div>
