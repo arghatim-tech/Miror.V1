@@ -1,27 +1,15 @@
 import type { Language } from "@/lib/i18n";
+import type {
+  AppearanceAttributes,
+  Occasion,
+  PersonalPhotoSet,
+  UserProfileInput,
+  WardrobeCategory,
+  WardrobeItemInput,
+} from "@/lib/miror-data";
 
-export type Occasion =
-  | "date"
-  | "party"
-  | "work"
-  | "wedding"
-  | "casual"
-  | "custom";
 export type Mode = "look" | "buy";
-export type WardrobeCategory =
-  | "tops"
-  | "pants"
-  | "shoes"
-  | "jackets"
-  | "accessories"
-  | "other";
-
-export type WardrobeItemInput = {
-  id: string;
-  image: string;
-  label: string;
-  category: WardrobeCategory;
-};
+export type { Occasion, WardrobeCategory, WardrobeItemInput };
 
 export type AnalysisResult = {
   assessment: string;
@@ -52,9 +40,12 @@ export type AnalyzeRequestBody = {
   groupMode: boolean;
   targetPersonNote: string;
   followUpAnswer: string;
-  selfie: string | null;
+  profile: UserProfileInput;
+  appearanceAttributes: AppearanceAttributes;
+  personalPhotos: PersonalPhotoSet;
+  currentLookImage: string | null;
   outfitImages: string[];
-  itemToBuy: string | null;
+  itemCheckImage: string | null;
   wardrobeItems: WardrobeItemInput[];
 };
 

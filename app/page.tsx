@@ -7,8 +7,6 @@ import {
   type AnalyzeRequestBody,
   type Mode,
   type Occasion,
-  type WardrobeCategory,
-  type WardrobeItemInput,
 } from "@/lib/analysis";
 import {
   appDictionaries,
@@ -17,6 +15,21 @@ import {
   isSupportedLanguage,
   type Language,
 } from "@/lib/i18n";
+import {
+  FIT_PREFERENCES,
+  WARDROBE_CATEGORIES,
+  createEmptyAppearanceAttributes,
+  createEmptyPersonalPhotoSet,
+  createEmptyTryOnDraft,
+  createEmptyUserProfile,
+  type AppearanceAttributes,
+  type FitPreference,
+  type PersonalPhotoSet,
+  type TryOnDraft,
+  type UserProfileInput,
+  type WardrobeCategory,
+  type WardrobeItemInput,
+} from "@/lib/miror-data";
 import { Playfair_Display } from "next/font/google";
 import { type ChangeEvent, useEffect, useState } from "react";
 
@@ -40,13 +53,15 @@ const OCCASION_ORDER: Occasion[] = [
   "custom",
 ];
 const SHOWCASE_OCCASIONS: Occasion[] = ["date", "party", "work", "casual"];
-const WARDROBE_CATEGORIES: WardrobeCategory[] = [
-  "tops",
-  "pants",
-  "shoes",
-  "jackets",
-  "accessories",
-  "other",
+const APPEARANCE_FIELDS: Array<
+  keyof Omit<AppearanceAttributes, "source">
+> = [
+  "approximateSkinTone",
+  "eyeColor",
+  "hairColor",
+  "faceShape",
+  "bodyFrameImpression",
+  "contrastLevel",
 ];
 const LANGUAGE_OPTIONS: Array<{ value: Language; label: string }> = [
   { value: "en", label: "English" },
@@ -66,6 +81,43 @@ const extraCopy: Record<
     uploadLookFirst: string;
     uploadItemFirst: string;
     uploadLookOrWardrobeFirst: string;
+    currentLookLabel: string;
+    currentLookPlaceholder: string;
+    profileTitle: string;
+    profileDescription: string;
+    measurementsLabel: string;
+    heightLabel: string;
+    weightLabel: string;
+    styleGoalLabel: string;
+    styleGoalPlaceholder: string;
+    preferredFitLabel: string;
+    preferredOccasionsLabel: string;
+    notesLabel: string;
+    notesPlaceholder: string;
+    profilePhotosTitle: string;
+    profilePhotosDescription: string;
+    profileSelfieLabel: string;
+    faceScanLabel: string;
+    bodyPhotoLabel: string;
+    uploadPlaceholder: string;
+    appearanceTitle: string;
+    appearanceDescription: string;
+    pendingValue: string;
+    fitOptions: Record<string, string>;
+    appearanceLabels: Record<string, string>;
+    tryOnTitle: string;
+    tryOnDescription: string;
+    personPhotoLabel: string;
+    garmentUploadLabel: string;
+    wardrobeChoiceLabel: string;
+    noWardrobeOption: string;
+    tryOnNoteLabel: string;
+    tryOnNotePlaceholder: string;
+    futureReadyLabel: string;
+    futureReadyText: string;
+    storagePlanTitle: string;
+    tablesLabel: string;
+    bucketsLabel: string;
   }
 > = {
   en: {
@@ -78,6 +130,56 @@ const extraCopy: Record<
     uploadLookFirst: "Upload an image first",
     uploadItemFirst: "Upload an item first",
     uploadLookOrWardrobeFirst: "Upload a look or wardrobe item first",
+    currentLookLabel: "Current look photo",
+    currentLookPlaceholder: "Upload the outfit you are wearing now.",
+    profileTitle: "User profile",
+    profileDescription: "Save physical and style context now so MIROR can personalize fit, color, and purchase advice later.",
+    measurementsLabel: "Measurements",
+    heightLabel: "Height (cm)",
+    weightLabel: "Weight (kg)",
+    styleGoalLabel: "Style goal",
+    styleGoalPlaceholder: "Example: sharper evening looks with cleaner proportions",
+    preferredFitLabel: "Preferred fit",
+    preferredOccasionsLabel: "Preferred occasions",
+    notesLabel: "Optional notes",
+    notesPlaceholder: "Example: I like clean tailoring, darker neutrals, and minimal branding.",
+    profilePhotosTitle: "Personal profile photos",
+    profilePhotosDescription: "Optional support photos for later profile analysis and smarter item checks.",
+    profileSelfieLabel: "Profile selfie",
+    faceScanLabel: "Face scan",
+    bodyPhotoLabel: "Body photo",
+    uploadPlaceholder: "Upload image",
+    appearanceTitle: "Prepared appearance attributes",
+    appearanceDescription: "These fields are ready for future AI extraction and later database storage.",
+    pendingValue: "Pending analysis",
+    fitOptions: {
+      tailored: "Tailored",
+      regular: "Regular",
+      relaxed: "Relaxed",
+      slim: "Slim",
+      oversized: "Oversized",
+    },
+    appearanceLabels: {
+      approximateSkinTone: "Approximate skin tone",
+      eyeColor: "Eye color",
+      hairColor: "Hair color",
+      faceShape: "Face shape",
+      bodyFrameImpression: "Body frame impression",
+      contrastLevel: "Contrast level",
+    },
+    tryOnTitle: "Try it on me",
+    tryOnDescription: "This is a clean placeholder for a future virtual try-on flow. The state is ready, but the image generation step is not connected yet.",
+    personPhotoLabel: "Person photo",
+    garmentUploadLabel: "Garment upload",
+    wardrobeChoiceLabel: "Or choose a wardrobe item",
+    noWardrobeOption: "No wardrobe item selected",
+    tryOnNoteLabel: "Try-on note",
+    tryOnNotePlaceholder: "Example: show this jacket over my current profile photo",
+    futureReadyLabel: "Future-ready",
+    futureReadyText: "Prepared for a later image-generation API that can combine a person photo with a wardrobe item or uploaded garment.",
+    storagePlanTitle: "Supabase-ready structure",
+    tablesLabel: "Tables",
+    bucketsLabel: "Buckets",
   },
   fr: {
     enable: "Activer",
@@ -89,6 +191,56 @@ const extraCopy: Record<
     uploadLookFirst: "Téléchargez d'abord une image",
     uploadItemFirst: "Téléchargez d'abord un article",
     uploadLookOrWardrobeFirst: "Téléchargez d'abord un look ou une pièce du dressing",
+    currentLookLabel: "Photo du look actuel",
+    currentLookPlaceholder: "Téléchargez la tenue que vous portez maintenant.",
+    profileTitle: "Profil utilisateur",
+    profileDescription: "Enregistrez votre contexte physique et stylistique pour personnaliser ensuite la coupe, les couleurs et les achats.",
+    measurementsLabel: "Mesures",
+    heightLabel: "Taille (cm)",
+    weightLabel: "Poids (kg)",
+    styleGoalLabel: "Objectif de style",
+    styleGoalPlaceholder: "Exemple : looks du soir plus nets avec de meilleures proportions",
+    preferredFitLabel: "Coupe préférée",
+    preferredOccasionsLabel: "Occasions préférées",
+    notesLabel: "Notes optionnelles",
+    notesPlaceholder: "Exemple : j'aime les coupes nettes, les neutres foncés et peu de logos.",
+    profilePhotosTitle: "Photos de profil personnel",
+    profilePhotosDescription: "Photos de support optionnelles pour une future analyse du profil et des recommandations d'achat plus intelligentes.",
+    profileSelfieLabel: "Selfie du profil",
+    faceScanLabel: "Scan du visage",
+    bodyPhotoLabel: "Photo du corps",
+    uploadPlaceholder: "Télécharger une image",
+    appearanceTitle: "Attributs d'apparence préparés",
+    appearanceDescription: "Ces champs sont prêts pour une future extraction IA et un stockage en base.",
+    pendingValue: "Analyse en attente",
+    fitOptions: {
+      tailored: "Ajusté",
+      regular: "Standard",
+      relaxed: "Décontracté",
+      slim: "Près du corps",
+      oversized: "Oversize",
+    },
+    appearanceLabels: {
+      approximateSkinTone: "Teint approximatif",
+      eyeColor: "Couleur des yeux",
+      hairColor: "Couleur des cheveux",
+      faceShape: "Forme du visage",
+      bodyFrameImpression: "Impression de carrure",
+      contrastLevel: "Niveau de contraste",
+    },
+    tryOnTitle: "Essaie-le sur moi",
+    tryOnDescription: "Ceci est un placeholder propre pour un futur essayage virtuel. L'état est prêt, mais la génération d'image n'est pas encore connectée.",
+    personPhotoLabel: "Photo de la personne",
+    garmentUploadLabel: "Téléchargement du vêtement",
+    wardrobeChoiceLabel: "Ou choisir une pièce du dressing",
+    noWardrobeOption: "Aucune pièce sélectionnée",
+    tryOnNoteLabel: "Note d'essayage",
+    tryOnNotePlaceholder: "Exemple : montre cette veste sur ma photo de profil actuelle",
+    futureReadyLabel: "Prêt pour la suite",
+    futureReadyText: "Préparé pour une future API de génération d'image qui combinera une photo de personne avec une pièce du dressing ou un vêtement téléchargé.",
+    storagePlanTitle: "Structure prête pour Supabase",
+    tablesLabel: "Tables",
+    bucketsLabel: "Buckets",
   },
   es: {
     enable: "Activar",
@@ -100,6 +252,56 @@ const extraCopy: Record<
     uploadLookFirst: "Sube primero una imagen",
     uploadItemFirst: "Sube primero una prenda",
     uploadLookOrWardrobeFirst: "Sube primero un look o prendas del armario",
+    currentLookLabel: "Foto del look actual",
+    currentLookPlaceholder: "Sube el outfit que llevas ahora.",
+    profileTitle: "Perfil de usuario",
+    profileDescription: "Guarda contexto físico y de estilo para que MIROR pueda personalizar mejor ajuste, color y decisiones de compra más adelante.",
+    measurementsLabel: "Medidas",
+    heightLabel: "Altura (cm)",
+    weightLabel: "Peso (kg)",
+    styleGoalLabel: "Objetivo de estilo",
+    styleGoalPlaceholder: "Ejemplo: looks de noche más pulidos con mejores proporciones",
+    preferredFitLabel: "Ajuste preferido",
+    preferredOccasionsLabel: "Ocasiones preferidas",
+    notesLabel: "Notas opcionales",
+    notesPlaceholder: "Ejemplo: me gustan los cortes limpios, neutros oscuros y poco branding.",
+    profilePhotosTitle: "Fotos personales de perfil",
+    profilePhotosDescription: "Fotos opcionales de apoyo para un futuro análisis del perfil y revisiones de compra más inteligentes.",
+    profileSelfieLabel: "Selfie de perfil",
+    faceScanLabel: "Escaneo facial",
+    bodyPhotoLabel: "Foto corporal",
+    uploadPlaceholder: "Subir imagen",
+    appearanceTitle: "Atributos de apariencia preparados",
+    appearanceDescription: "Estos campos están listos para una futura extracción por IA y almacenamiento en base de datos.",
+    pendingValue: "Análisis pendiente",
+    fitOptions: {
+      tailored: "Entallado",
+      regular: "Regular",
+      relaxed: "Relajado",
+      slim: "Slim",
+      oversized: "Oversize",
+    },
+    appearanceLabels: {
+      approximateSkinTone: "Tono de piel aproximado",
+      eyeColor: "Color de ojos",
+      hairColor: "Color de pelo",
+      faceShape: "Forma del rostro",
+      bodyFrameImpression: "Impresión de estructura corporal",
+      contrastLevel: "Nivel de contraste",
+    },
+    tryOnTitle: "Pruébalo en mí",
+    tryOnDescription: "Esto es un placeholder limpio para una futura prueba virtual. El estado ya está preparado, pero la generación de imagen aún no está conectada.",
+    personPhotoLabel: "Foto de la persona",
+    garmentUploadLabel: "Subir prenda",
+    wardrobeChoiceLabel: "O elige una prenda del armario",
+    noWardrobeOption: "Sin prenda seleccionada",
+    tryOnNoteLabel: "Nota para la prueba",
+    tryOnNotePlaceholder: "Ejemplo: muestra esta chaqueta sobre mi foto de perfil actual",
+    futureReadyLabel: "Listo para el futuro",
+    futureReadyText: "Preparado para una futura API de generación de imágenes que combine una foto de la persona con una prenda del armario o una prenda subida.",
+    storagePlanTitle: "Estructura lista para Supabase",
+    tablesLabel: "Tablas",
+    bucketsLabel: "Buckets",
   },
   ar: {
     enable: "تفعيل",
@@ -111,6 +313,56 @@ const extraCopy: Record<
     uploadLookFirst: "ارفع صورة أولاً",
     uploadItemFirst: "ارفع قطعة أولاً",
     uploadLookOrWardrobeFirst: "ارفع إطلالة أو قطعة من الخزانة أولاً",
+    currentLookLabel: "صورة الإطلالة الحالية",
+    currentLookPlaceholder: "ارفع الإطلالة التي ترتديها الآن.",
+    profileTitle: "ملف المستخدم",
+    profileDescription: "احفظ السياق الجسدي والأسلوبي الآن حتى يتمكن MIROR لاحقاً من تخصيص المقاس والألوان وقرارات الشراء.",
+    measurementsLabel: "القياسات",
+    heightLabel: "الطول (سم)",
+    weightLabel: "الوزن (كغ)",
+    styleGoalLabel: "هدف الأسلوب",
+    styleGoalPlaceholder: "مثال: إطلالات مسائية أكثر حدة مع نسب أنظف",
+    preferredFitLabel: "القصّة المفضلة",
+    preferredOccasionsLabel: "المناسبات المفضلة",
+    notesLabel: "ملاحظات اختيارية",
+    notesPlaceholder: "مثال: أحب الخياطة النظيفة، الدرجات الداكنة، وأقل قدر من الشعارات.",
+    profilePhotosTitle: "صور الملف الشخصي",
+    profilePhotosDescription: "صور داعمة اختيارية لتحليل الملف لاحقاً وجعل فحص الشراء أذكى.",
+    profileSelfieLabel: "سيلفي الملف الشخصي",
+    faceScanLabel: "مسح الوجه",
+    bodyPhotoLabel: "صورة الجسم",
+    uploadPlaceholder: "ارفع صورة",
+    appearanceTitle: "سمات المظهر الجاهزة",
+    appearanceDescription: "هذه الحقول جاهزة لاستخراج مستقبلي بالذكاء الاصطناعي وللتخزين في قاعدة البيانات.",
+    pendingValue: "بانتظار التحليل",
+    fitOptions: {
+      tailored: "مفصّل",
+      regular: "عادي",
+      relaxed: "مريح",
+      slim: "ضيّق",
+      oversized: "واسع",
+    },
+    appearanceLabels: {
+      approximateSkinTone: "درجة البشرة التقريبية",
+      eyeColor: "لون العينين",
+      hairColor: "لون الشعر",
+      faceShape: "شكل الوجه",
+      bodyFrameImpression: "انطباع البنية الجسدية",
+      contrastLevel: "مستوى التباين",
+    },
+    tryOnTitle: "جرّبه عليّ",
+    tryOnDescription: "هذا placeholder نظيف لميزة تجربة افتراضية لاحقة. الحالة البرمجية جاهزة لكن توليد الصورة غير موصول بعد.",
+    personPhotoLabel: "صورة الشخص",
+    garmentUploadLabel: "رفع القطعة",
+    wardrobeChoiceLabel: "أو اختر قطعة من الخزانة",
+    noWardrobeOption: "لا توجد قطعة مختارة",
+    tryOnNoteLabel: "ملاحظة التجربة",
+    tryOnNotePlaceholder: "مثال: أظهر هذه الجاكيت فوق صورة ملفي الحالية",
+    futureReadyLabel: "جاهز للمستقبل",
+    futureReadyText: "مهيأ لواجهة توليد صور مستقبلية تجمع بين صورة الشخص وقطعة من الخزانة أو قطعة مرفوعة.",
+    storagePlanTitle: "بنية جاهزة لـ Supabase",
+    tablesLabel: "الجداول",
+    bucketsLabel: "Buckets",
   },
 };
 
@@ -138,6 +390,7 @@ function isAnalysisResult(value: unknown): value is AnalysisResult {
     "winningOutfitLabel" in value &&
     "winningReason" in value &&
     "comparisonNotes" in value &&
+    "wardrobeSuggestions" in value &&
     "followUpRequired" in value &&
     "followUpQuestion" in value
   );
@@ -291,7 +544,7 @@ function Score({
 }
 
 export default function Page() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
   const [page, setPage] = useState<PageState>("home");
   const [language, setLanguage] = useState<Language>(defaultLanguage);
   const [mode, setMode] = useState<Mode>("look");
@@ -299,10 +552,18 @@ export default function Page() {
   const [customOccasion, setCustomOccasion] = useState("");
   const [groupMode, setGroupMode] = useState(false);
   const [targetPersonNote, setTargetPersonNote] = useState("");
-  const [selfie, setSelfie] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfileInput>(createEmptyUserProfile());
+  const [appearanceAttributes] = useState<AppearanceAttributes>(
+    createEmptyAppearanceAttributes(),
+  );
+  const [personalPhotos, setPersonalPhotos] = useState<PersonalPhotoSet>(
+    createEmptyPersonalPhotoSet(),
+  );
+  const [currentLookImage, setCurrentLookImage] = useState<string | null>(null);
   const [outfits, setOutfits] = useState<Array<string | null>>([null, null, null]);
-  const [itemToBuy, setItemToBuy] = useState<string | null>(null);
+  const [itemCheckImage, setItemCheckImage] = useState<string | null>(null);
   const [wardrobeItems, setWardrobeItems] = useState<WardrobeItemInput[]>([]);
+  const [tryOnDraft, setTryOnDraft] = useState<TryOnDraft>(createEmptyTryOnDraft());
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -349,9 +610,9 @@ export default function Page() {
   const hasWardrobe = wardrobeItems.length > 0;
   const canAnalyze =
     mode === "look"
-      ? Boolean(selfie || uploadedOutfitImages.length > 0 || hasWardrobe)
-      : Boolean(itemToBuy);
-  const previewImage = mode === "look" ? selfie : itemToBuy;
+      ? Boolean(currentLookImage || uploadedOutfitImages.length > 0 || hasWardrobe)
+      : Boolean(itemCheckImage);
+  const previewImage = mode === "look" ? currentLookImage : itemCheckImage;
   const winningOutfitImage =
     mode === "look" && result && result.winningOutfitIndex > 0
       ? uploadedOutfitImages[result.winningOutfitIndex - 1] ?? null
@@ -448,6 +709,25 @@ export default function Page() {
     setFollowUpAnswer("");
   };
 
+  const updatePersonalPhoto = (field: keyof PersonalPhotoSet, value: string | null) => {
+    setPersonalPhotos((currentPhotos) => ({
+      ...currentPhotos,
+      [field]: value,
+    }));
+    resetAnalysisFeedback();
+  };
+
+  const updateUserProfile = <Key extends keyof UserProfileInput>(
+    field: Key,
+    value: UserProfileInput[Key],
+  ) => {
+    setUserProfile((currentProfile) => ({
+      ...currentProfile,
+      [field]: value,
+    }));
+    resetAnalysisFeedback();
+  };
+
   async function onSingleImage(
     event: ChangeEvent<HTMLInputElement>,
     setter: (value: string | null) => void,
@@ -460,6 +740,21 @@ export default function Page() {
     const dataUrl = await readFileAsDataUrl(file);
     setter(dataUrl);
     resetAnalysisFeedback();
+    event.target.value = "";
+  }
+
+  async function onPersonalPhotoUpload(
+    event: ChangeEvent<HTMLInputElement>,
+    field: keyof PersonalPhotoSet,
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const dataUrl = await readFileAsDataUrl(file);
+    updatePersonalPhoto(field, dataUrl);
     event.target.value = "";
   }
 
@@ -535,6 +830,25 @@ export default function Page() {
     resetAnalysisFeedback();
   }
 
+  async function onTryOnUpload(
+    event: ChangeEvent<HTMLInputElement>,
+    field: "personPhoto" | "uploadedGarmentImage",
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const dataUrl = await readFileAsDataUrl(file);
+    setTryOnDraft((currentDraft) => ({
+      ...currentDraft,
+      [field]: dataUrl,
+    }));
+    resetAnalysisFeedback();
+    event.target.value = "";
+  }
+
   async function runAnalysis(clarification = "") {
     if (!canAnalyze) {
       return;
@@ -554,9 +868,12 @@ export default function Page() {
       groupMode,
       targetPersonNote,
       followUpAnswer: clarification.trim(),
-      selfie,
+      profile: userProfile,
+      appearanceAttributes,
+      personalPhotos,
+      currentLookImage,
       outfitImages: uploadedOutfitImages,
-      itemToBuy,
+      itemCheckImage,
       wardrobeItems,
     };
 
@@ -1039,24 +1356,24 @@ export default function Page() {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(event) => onSingleImage(event, setSelfie)}
+                        onChange={(event) => onSingleImage(event, setCurrentLookImage)}
                       />
-                      {selfie ? (
+                      {currentLookImage ? (
                         <img
-                          src={selfie}
+                          src={currentLookImage}
                           alt="Uploaded look"
                           className="h-56 w-full rounded-xl object-cover"
                         />
                       ) : (
                         <>
                           <div className={cx("text-[10px] uppercase tracking-[0.18em]", accentTextClass)}>
-                            {dictionary.demoSection.primaryImage}
+                            {extra.currentLookLabel}
                           </div>
                           <div className={cx("mt-3 text-base font-semibold", primaryTextClass)}>
-                            {dictionary.demoSection.uploadLookTitle}
+                            {extra.currentLookLabel}
                           </div>
                           <div className={cx("mt-2 text-sm", mutedClass)}>
-                            {dictionary.demoSection.uploadLookDescription}
+                            {extra.currentLookPlaceholder}
                           </div>
                         </>
                       )}
@@ -1158,11 +1475,11 @@ export default function Page() {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(event) => onSingleImage(event, setItemToBuy)}
+                        onChange={(event) => onSingleImage(event, setItemCheckImage)}
                       />
-                      {itemToBuy ? (
+                      {itemCheckImage ? (
                         <img
-                          src={itemToBuy}
+                          src={itemCheckImage}
                           alt="Item to buy"
                           className="h-56 w-full rounded-xl object-cover"
                         />
@@ -1182,6 +1499,214 @@ export default function Page() {
                     </label>
                   </div>
                 )}
+
+                <div className={cx(softPanelClass, "mt-6 p-4")}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="max-w-2xl">
+                      <div className={cx("font-semibold", accentTextClass)}>
+                        {extra.profileTitle}
+                      </div>
+                      <p className={cx("mt-1 text-sm leading-7", mutedClass)}>
+                        {extra.profileDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={cx("mt-4 text-[11px] uppercase tracking-[0.16em]", subduedClass)}>
+                    {extra.measurementsLabel}
+                  </div>
+
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.heightLabel}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={userProfile.heightCm}
+                        onChange={(event) => updateUserProfile("heightCm", event.target.value)}
+                        className={cx(
+                          "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                          isDark
+                            ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] focus:border-[#d2ab55]"
+                            : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] focus:border-amber-700",
+                        )}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.weightLabel}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={userProfile.weightKg}
+                        onChange={(event) => updateUserProfile("weightKg", event.target.value)}
+                        className={cx(
+                          "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                          isDark
+                            ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] focus:border-[#d2ab55]"
+                            : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] focus:border-amber-700",
+                        )}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.styleGoalLabel}
+                      </span>
+                      <input
+                        type="text"
+                        value={userProfile.styleGoal}
+                        placeholder={extra.styleGoalPlaceholder}
+                        onChange={(event) => updateUserProfile("styleGoal", event.target.value)}
+                        className={cx(
+                          "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                          isDark
+                            ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                            : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                        )}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.preferredFitLabel}
+                      </span>
+                      <select
+                        value={userProfile.preferredFit}
+                        onChange={(event) =>
+                          updateUserProfile("preferredFit", event.target.value as FitPreference)
+                        }
+                        className={cx(selectClass, "w-full")}
+                      >
+                        <option value="">{extra.pendingValue}</option>
+                        {FIT_PREFERENCES.map((fit) => (
+                          <option key={fit} value={fit}>
+                            {extra.fitOptions[fit]}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className={cx("mb-3 text-sm", mutedClass)}>
+                      {extra.preferredOccasionsLabel}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {OCCASION_ORDER.map((option) => {
+                        const active = userProfile.preferredOccasions.includes(option);
+
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() =>
+                              updateUserProfile(
+                                "preferredOccasions",
+                                active
+                                  ? userProfile.preferredOccasions.filter((item) => item !== option)
+                                  : [...userProfile.preferredOccasions, option],
+                              )
+                            }
+                            className={pillClass(active)}
+                          >
+                            {dictionary.demoSection.occasionLabels[option]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <label className="mt-4 block">
+                    <span className={cx("mb-2 block text-sm", mutedClass)}>
+                      {extra.notesLabel}
+                    </span>
+                    <textarea
+                      value={userProfile.notes}
+                      rows={3}
+                      maxLength={240}
+                      placeholder={extra.notesPlaceholder}
+                      onChange={(event) => updateUserProfile("notes", event.target.value)}
+                      className={cx(
+                        "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors placeholder:transition-colors",
+                        isDark
+                          ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                          : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                      )}
+                    />
+                  </label>
+
+                  <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className={cx("rounded-2xl p-4", isDark ? "bg-[#120f0b]" : "border border-[#ddd3c1] bg-[#fffdf8]")}>
+                      <div className={cx("font-semibold", accentTextClass)}>
+                        {extra.profilePhotosTitle}
+                      </div>
+                      <p className={cx("mt-1 text-sm leading-7", mutedClass)}>
+                        {extra.profilePhotosDescription}
+                      </p>
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        {(
+                          [
+                            ["selfie", extra.profileSelfieLabel, personalPhotos.selfie],
+                            ["faceScan", extra.faceScanLabel, personalPhotos.faceScan],
+                            ["bodyPhoto", extra.bodyPhotoLabel, personalPhotos.bodyPhoto],
+                          ] as Array<[keyof PersonalPhotoSet, string, string | null]>
+                        ).map(([field, label, value]) => (
+                          <label key={field} className={cx(inputShellClass, "cursor-pointer p-3")}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => onPersonalPhotoUpload(event, field)}
+                            />
+                            {value ? (
+                              <img
+                                src={value}
+                                alt={label}
+                                className="h-28 w-full rounded-xl object-cover"
+                              />
+                            ) : (
+                              <div className={cx("flex h-28 items-center justify-center text-center text-sm", mutedClass)}>
+                                {label}
+                              </div>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={cx("rounded-2xl p-4", isDark ? "bg-[#120f0b]" : "border border-[#ddd3c1] bg-[#fffdf8]")}>
+                      <div className={cx("font-semibold", accentTextClass)}>
+                        {extra.appearanceTitle}
+                      </div>
+                      <p className={cx("mt-1 text-sm leading-7", mutedClass)}>
+                        {extra.appearanceDescription}
+                      </p>
+                      <div className="mt-4 space-y-2 text-sm">
+                        {APPEARANCE_FIELDS.map((key) => (
+                          <div
+                            key={key}
+                            className={cx(
+                              "flex items-center justify-between gap-3 rounded-xl border px-3 py-2",
+                              isDark
+                                ? "border-[#4a3d2f] bg-[#181411]"
+                                : "border-[#ddd3c1] bg-[#fcfaf5]",
+                            )}
+                          >
+                            <span className={mutedClass}>{extra.appearanceLabels[key]}</span>
+                            <span className={accentTextClass}>
+                              {appearanceAttributes[key] || extra.pendingValue}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div className={cx(softPanelClass, "mt-6 p-4")}>
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1304,6 +1829,116 @@ export default function Page() {
                       {dictionary.demoSection.wardrobeSuggestionsEmpty}
                     </div>
                   )}
+                </div>
+
+                <div className={cx(softPanelClass, "mt-6 p-4")}>
+                  <div className={cx("font-semibold", accentTextClass)}>
+                    {extra.tryOnTitle}
+                  </div>
+                  <p className={cx("mt-1 text-sm leading-7", mutedClass)}>
+                    {extra.tryOnDescription}
+                  </p>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className={cx(inputShellClass, "flex cursor-pointer flex-col items-center justify-center p-4 text-center")}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => onTryOnUpload(event, "personPhoto")}
+                      />
+                      {tryOnDraft.personPhoto ? (
+                        <img
+                          src={tryOnDraft.personPhoto}
+                          alt={extra.personPhotoLabel}
+                          className="h-32 w-full rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className={cx("flex h-32 items-center justify-center text-center text-sm", mutedClass)}>
+                          {extra.personPhotoLabel}
+                        </div>
+                      )}
+                    </label>
+
+                    <label className={cx(inputShellClass, "flex cursor-pointer flex-col items-center justify-center p-4 text-center")}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => onTryOnUpload(event, "uploadedGarmentImage")}
+                      />
+                      {tryOnDraft.uploadedGarmentImage ? (
+                        <img
+                          src={tryOnDraft.uploadedGarmentImage}
+                          alt={extra.garmentUploadLabel}
+                          className="h-32 w-full rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className={cx("flex h-32 items-center justify-center text-center text-sm", mutedClass)}>
+                          {extra.garmentUploadLabel}
+                        </div>
+                      )}
+                    </label>
+                  </div>
+
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.wardrobeChoiceLabel}
+                      </span>
+                      <select
+                        value={tryOnDraft.selectedWardrobeItemId ?? ""}
+                        onChange={(event) => {
+                          setTryOnDraft((currentDraft) => ({
+                            ...currentDraft,
+                            selectedWardrobeItemId: event.target.value || null,
+                          }));
+                        }}
+                        className={cx(selectClass, "w-full")}
+                      >
+                        <option value="">{extra.noWardrobeOption}</option>
+                        {wardrobeItems.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className={cx("mb-2 block text-sm", mutedClass)}>
+                        {extra.tryOnNoteLabel}
+                      </span>
+                      <input
+                        type="text"
+                        value={tryOnDraft.note}
+                        placeholder={extra.tryOnNotePlaceholder}
+                        onChange={(event) =>
+                          setTryOnDraft((currentDraft) => ({
+                            ...currentDraft,
+                            note: event.target.value,
+                          }))
+                        }
+                        className={cx(
+                          "w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors",
+                          isDark
+                            ? "border-[#4a3d2f] bg-[#120f0b] text-[#fff6eb] placeholder:text-[#8f8170] focus:border-[#d2ab55]"
+                            : "border-[#d7ccb7] bg-[#fffdf8] text-[#17130e] placeholder:text-[#8f8372] focus:border-amber-700",
+                        )}
+                      />
+                    </label>
+                  </div>
+
+                  <div
+                    className={cx(
+                      "mt-4 rounded-xl border px-4 py-3 text-sm",
+                      isDark
+                        ? "border-[#4a3d2f] bg-[#120f0b] text-[#d9ccbc]"
+                        : "border-[#ddd3c1] bg-[#fffdf8] text-[#6f6658]",
+                    )}
+                  >
+                    <span className={accentTextClass}>{extra.futureReadyLabel}:</span>{" "}
+                    {extra.futureReadyText}
+                  </div>
                 </div>
 
                 <div className="mt-6">
