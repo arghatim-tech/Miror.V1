@@ -1,6 +1,5 @@
 ﻿"use client";
 
-import Link from "next/link";
 import { PricingGrid } from "@/components/pricing-grid";
 import {
   getAreasToRefine,
@@ -735,18 +734,13 @@ export default function Page() {
             >
               {isDark ? dictionary.common.whiteMode : dictionary.common.blackMode}
             </button>
-            <Link
-              href="/auth?mode=login"
-              className={cx("rounded-sm border px-4 py-2 text-sm transition-colors", secondaryButtonClass)}
-            >
-              Login
-            </Link>
-            <Link
-              href="/auth?mode=signup"
+            <button
+              type="button"
+              onClick={() => setPage("pricing")}
               className={cx("rounded-sm px-5 py-2.5 text-sm font-semibold", accentButtonClass)}
             >
-              Create Account
-            </Link>
+              {dictionary.common.getStarted}
+            </button>
           </div>
         </div>
       </header>
@@ -766,40 +760,11 @@ export default function Page() {
                 {dictionary.hero.description}
               </p>
               <div className="mt-10 flex flex-wrap gap-4">
-                <Link
-                  href="/auth?mode=signup"
-                  className={cx(
-                    "rounded-sm px-6 py-4 text-sm font-semibold uppercase tracking-[0.12em]",
-                    accentButtonClass,
-                  )}
-                >
-                  Create Account
-                </Link>
-                <Link
-                  href="/auth?mode=login"
-                  className={cx(
-                    "rounded-sm border px-6 py-4 text-sm uppercase tracking-[0.12em] transition-colors",
-                    secondaryButtonClass,
-                  )}
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/workspace?access=guest&section=analyze"
-                  className={cx(
-                    "rounded-sm border px-6 py-4 text-sm uppercase tracking-[0.12em] transition-colors",
-                    secondaryButtonClass,
-                  )}
-                >
-                  Try as Guest
-                </Link>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-4">
                 <a
                   href="#demo"
                   className={cx(
-                    "rounded-sm border px-5 py-3 text-sm uppercase tracking-[0.12em] transition-colors",
-                    secondaryButtonClass,
+                    "rounded-sm px-6 py-4 text-sm font-semibold uppercase tracking-[0.12em]",
+                    accentButtonClass,
                   )}
                 >
                   {dictionary.hero.analyze}
@@ -807,16 +772,12 @@ export default function Page() {
                 <a
                   href="#process"
                   className={cx(
-                    "rounded-sm border px-5 py-3 text-sm uppercase tracking-[0.12em] transition-colors",
+                    "rounded-sm border px-6 py-4 text-sm uppercase tracking-[0.12em] transition-colors",
                     secondaryButtonClass,
                   )}
                 >
                   {dictionary.hero.seeProcess}
                 </a>
-              </div>
-              <div className={cx("mt-4 max-w-xl text-sm leading-7", mutedClass)}>
-                Sign in to enter the app workspace, or continue as a guest to test MIROR without
-                creating an account first.
               </div>
             </div>
 
@@ -1189,7 +1150,7 @@ export default function Page() {
                                 className="h-32 w-full rounded-xl object-cover"
                               />
                             ) : (
-                              <div className={`flex h-32 items-center justify-center text-center text-sm ${mutedClass}`}>
+                              <div className={cx("flex h-32 items-center justify-center text-center text-sm", mutedClass)}>
                                 Outfit {index + 1}
                               </div>
                             )}

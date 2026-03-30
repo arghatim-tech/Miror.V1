@@ -20,6 +20,26 @@ export const WARDROBE_CATEGORIES = [
 
 export type WardrobeCategory = (typeof WARDROBE_CATEGORIES)[number];
 
+export const AUTH_PROVIDERS = [
+  "google",
+  "facebook",
+  "email",
+  "phone",
+] as const;
+
+export type AuthProvider = (typeof AUTH_PROVIDERS)[number];
+
+export const WORKSPACE_SECTIONS = [
+  "profile",
+  "analyze",
+  "wardrobe",
+  "try-on",
+  "pricing",
+  "settings",
+] as const;
+
+export type WorkspaceSection = (typeof WORKSPACE_SECTIONS)[number];
+
 export const FIT_PREFERENCES = [
   "tailored",
   "regular",
@@ -69,9 +89,18 @@ export type WardrobeItemInput = {
 
 export type TryOnDraft = {
   personPhoto: string | null;
+  personPhotoSource: "upload" | "profile-selfie" | "profile-face-scan" | "profile-body-photo";
   selectedWardrobeItemId: string | null;
   uploadedGarmentImage: string | null;
   note: string;
+};
+
+export type AccountState = {
+  accessMode: "guest" | "member" | null;
+  authProvider: AuthProvider | null;
+  displayName: string;
+  loginIdentifier: string;
+  onboardingComplete: boolean;
 };
 
 export type MirorSupabasePlan = {
@@ -91,12 +120,14 @@ export const MIROR_SUPABASE_PLAN: MirorSupabasePlan = {
     "look_images",
     "analysis_results",
     "item_checks",
+    "try_on_requests",
   ],
   storageBuckets: [
     "profile-images",
     "look-photos",
     "wardrobe-items",
     "item-checks",
+    "try-on-assets",
   ],
 };
 
@@ -134,9 +165,20 @@ export function createEmptyPersonalPhotoSet(): PersonalPhotoSet {
 export function createEmptyTryOnDraft(): TryOnDraft {
   return {
     personPhoto: null,
+    personPhotoSource: "upload",
     selectedWardrobeItemId: null,
     uploadedGarmentImage: null,
     note: "",
+  };
+}
+
+export function createEmptyAccountState(): AccountState {
+  return {
+    accessMode: null,
+    authProvider: null,
+    displayName: "",
+    loginIdentifier: "",
+    onboardingComplete: false,
   };
 }
 
